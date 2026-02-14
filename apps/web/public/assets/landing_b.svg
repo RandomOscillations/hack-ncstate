@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+  <defs>
+    <linearGradient id="g" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ff5a7a" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#0b0f14" stop-opacity="1"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="700" fill="url(#g)"/>
+  <rect x="80" y="80" width="1040" height="540" rx="26" fill="#0f1621" stroke="rgba(255,255,255,0.12)"/>
+  <text x="120" y="150" font-family="ui-sans-serif, system-ui" font-size="44" fill="#e7eef7">Landing B</text>
+  <text x="120" y="205" font-family="ui-sans-serif, system-ui" font-size="20" fill="#93a4b7">More elements competing for attention.</text>
+  <rect x="120" y="252" width="780" height="16" rx="8" fill="rgba(231,238,247,0.18)"/>
+  <rect x="120" y="284" width="720" height="16" rx="8" fill="rgba(231,238,247,0.14)"/>
+  <rect x="120" y="316" width="760" height="16" rx="8" fill="rgba(231,238,247,0.14)"/>
+  <rect x="120" y="380" width="320" height="48" rx="14" fill="rgba(255,90,122,0.88)"/>
+  <text x="150" y="412" font-family="ui-sans-serif, system-ui" font-size="18" fill="#1b0b10">Try it now</text>
+  <rect x="470" y="380" width="300" height="48" rx="14" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.12)"/>
+  <text x="500" y="412" font-family="ui-sans-serif, system-ui" font-size="18" fill="#e7eef7">Watch demo</text>
+  <rect x="820" y="230" width="260" height="300" rx="22" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.1)"/>
+  <text x="850" y="270" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="16" fill="#93a4b7">Sidebar ads</text>
+</svg>
+

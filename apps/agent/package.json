@@ -1,0 +1,19 @@
+{
+  "name": "@unblock/agent",
+  "version": "0.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.98.0",
+    "@unblock/common": "0.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}
+

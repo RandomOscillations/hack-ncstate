@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Unblock.Agent Resolver</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="brand">
+        <div class="logo">UA</div>
+        <div>
+          <div class="title">Unblock.Agent</div>
+          <div class="subtitle">Resolver Console (Hackathon Demo)</div>
+        </div>
+      </div>
+      <div class="settings">
+        <label>
+          Resolver Pubkey
+          <input id="resolverPubkey" placeholder="Enter devnet pubkey" />
+        </label>
+        <label>
+          Demo Token
+          <input id="demoToken" placeholder="x-demo-token" />
+        </label>
+        <button id="saveSettings">Save</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="panel">
+        <div class="panelHeader">
+          <h2>Open Tasks</h2>
+          <div class="meta">
+            <span id="statusText">Connecting...</span>
+            <button id="refreshBtn">Refresh</button>
+          </div>
+        </div>
+        <div id="tasks" class="tasks"></div>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
+
