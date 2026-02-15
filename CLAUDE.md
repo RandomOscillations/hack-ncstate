@@ -120,6 +120,22 @@ npm run scripts:print-pubkey -- escrow
 # 4. Set MOCK_SOLANA=0 in both apps/server/.env and apps/agent/.env
 ```
 
+### Seed Demo Tasks
+
+Populates the server with 13 realistic tasks across varied statuses (OPEN, CLAIMED, FULFILLED, UNDER_REVIEW, VERIFIED_PAID, DISPUTED). Registers publisher, subscriber, and supervisor agents with fulfillment data and scores.
+
+```bash
+# Server must be running first
+npm run seed
+```
+
+### Run Integration Tests
+
+```bash
+# Server must be running first
+bash test-integration.sh
+```
+
 ### Build & Typecheck
 
 ```bash

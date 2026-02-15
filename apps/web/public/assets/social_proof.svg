@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+  <defs>
+    <linearGradient id="g" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#0b0f14" stop-opacity="1"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="700" fill="url(#g)"/>
+  <rect x="80" y="60" width="1040" height="580" rx="26" fill="#0f1621" stroke="rgba(255,255,255,0.12)"/>
+
+  <!-- Hero section -->
+  <text x="120" y="130" font-family="ui-sans-serif, system-ui" font-size="38" fill="#e7eef7">CyberShield Pro</text>
+  <text x="120" y="168" font-family="ui-sans-serif, system-ui" font-size="20" fill="#93a4b7">Enterprise-grade threat detection</text>
+  <rect x="120" y="190" width="460" height="12" rx="6" fill="rgba(231,238,247,0.12)"/>
+  <rect x="120" y="215" width="380" height="12" rx="6" fill="rgba(231,238,247,0.08)"/>
+
+  <rect x="120" y="255" width="200" height="48" rx="14" fill="rgba(139,92,246,0.85)"/>
+  <text x="165" y="285" font-family="ui-sans-serif, system-ui" font-size="16" fill="#f0e6ff">Start free trial</text>
+
+  <!-- Logo bar (mix of strong and weak) -->
+  <rect x="120" y="340" width="980" height="80" rx="14" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.06)"/>
+  <text x="140" y="372" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#93a4b7">TRUSTED BY</text>
+
+  <!-- Strong logos -->
+  <rect x="260" y="355" width="100" height="36" rx="6" fill="rgba(139,92,246,0.15)" stroke="rgba(139,92,246,0.25)"/>
+  <text x="275" y="378" font-family="ui-sans-serif, system-ui" font-size="14" fill="#c4b5fd">Stripe</text>
+  <rect x="380" y="355" width="100" height="36" rx="6" fill="rgba(139,92,246,0.15)" stroke="rgba(139,92,246,0.25)"/>
+  <text x="395" y="378" font-family="ui-sans-serif, system-ui" font-size="14" fill="#c4b5fd">Shopify</text>
+  <rect x="500" y="355" width="120" height="36" rx="6" fill="rgba(139,92,246,0.15)" stroke="rgba(139,92,246,0.25)"/>
+  <text x="515" y="378" font-family="ui-sans-serif, system-ui" font-size="14" fill="#c4b5fd">Datadog</text>
+
+  <!-- Weak logos -->
+  <rect x="650" y="355" width="120" height="36" rx="6" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)"/>
+  <text x="670" y="378" font-family="ui-sans-serif, system-ui" font-size="13" fill="#737373">Acme Inc</text>
+  <rect x="790" y="355" width="120" height="36" rx="6" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)"/>
+  <text x="810" y="378" font-family="ui-sans-serif, system-ui" font-size="13" fill="#737373">FooBar Co</text>
+  <rect x="930" y="355" width="130" height="36" rx="6" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)"/>
+  <text x="945" y="378" font-family="ui-sans-serif, system-ui" font-size="13" fill="#737373">NexGen Ltd</text>
+
+  <!-- Features section placeholder -->
+  <text x="120" y="470" font-family="ui-sans-serif, system-ui" font-size="22" fill="#e7eef7">Features</text>
+  <rect x="120" y="490" width="440" height="12" rx="6" fill="rgba(231,238,247,0.08)"/>
+  <rect x="120" y="515" width="380" height="12" rx="6" fill="rgba(231,238,247,0.06)"/>
+
+  <!-- Testimonial (below features, below fold) -->
+  <rect x="640" y="450" width="440" height="170" rx="18" fill="rgba(139,92,246,0.06)" stroke="rgba(139,92,246,0.15)"/>
+  <text x="670" y="486" font-family="ui-sans-serif, system-ui" font-size="15" fill="#c4b5fd">"</text>
+  <rect x="685" y="475" width="360" height="10" rx="5" fill="rgba(231,238,247,0.1)"/>
+  <rect x="685" y="498" width="320" height="10" rx="5" fill="rgba(231,238,247,0.08)"/>
+  <rect x="685" y="521" width="280" height="10" rx="5" fill="rgba(231,238,247,0.08)"/>
+  <text x="685" y="560" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="13" fill="#93a4b7">— Sarah Chen, CTO @ Acme Inc</text>
+  <text x="685" y="585" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#8b5cf6">Below the fold</text>
+
+  <!-- Counter -->
+  <rect x="120" y="555" width="440" height="60" rx="14" fill="rgba(139,92,246,0.08)" stroke="rgba(139,92,246,0.15)"/>
+  <text x="220" y="594" font-family="ui-sans-serif, system-ui" font-size="26" fill="#e7eef7">10,000+ teams trust us</text>
+</svg>

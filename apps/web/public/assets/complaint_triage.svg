@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+  <defs>
+    <linearGradient id="g" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#f43f5e" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#0b0f14" stop-opacity="1"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="700" fill="url(#g)"/>
+
+  <!-- Ticket 1 -->
+  <rect x="40" y="40" width="560" height="300" rx="22" fill="#0f1621" stroke="rgba(255,255,255,0.12)"/>
+  <rect x="70" y="65" width="60" height="24" rx="6" fill="rgba(239,68,68,0.2)" stroke="rgba(239,68,68,0.3)"/>
+  <text x="78" y="82" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#f87171">#1247</text>
+  <rect x="140" y="65" width="100" height="24" rx="6" fill="rgba(239,68,68,0.15)"/>
+  <text x="152" y="82" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#f87171">Billing</text>
+  <text x="260" y="82" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#737373">2 hours ago</text>
+
+  <rect x="70" y="102" width="500" height="14" rx="7" fill="rgba(231,238,247,0.18)"/>
+  <rect x="70" y="128" width="460" height="12" rx="6" fill="rgba(231,238,247,0.08)"/>
+  <rect x="70" y="150" width="480" height="12" rx="6" fill="rgba(231,238,247,0.08)"/>
+  <rect x="70" y="172" width="400" height="12" rx="6" fill="rgba(231,238,247,0.08)"/>
+
+  <text x="70" y="210" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#f87171">Charged $499 instead of $49 — card already debited</text>
+  <text x="70" y="235" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#93a4b7">Customer: Enterprise plan, 2yr tenure</text>
+
+  <text x="70" y="270" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#737373">Sentiment:</text>
+  <rect x="160" y="258" width="80" height="20" rx="4" fill="rgba(239,68,68,0.2)"/>
+  <text x="172" y="273" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#f87171">Angry</text>
+  <text x="255" y="270" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#737373">Churn risk:</text>
+  <rect x="345" y="258" width="60" height="20" rx="4" fill="rgba(239,68,68,0.2)"/>
+  <text x="357" y="273" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#f87171">High</text>
+
+  <!-- Ticket 2 -->
+  <rect x="620" y="40" width="560" height="300" rx="22" fill="#0f1621" stroke="rgba(255,255,255,0.12)"/>
+  <rect x="650" y="65" width="60" height="24" rx="6" fill="rgba(251,191,36,0.2)" stroke="rgba(251,191,36,0.3)"/>
+  <text x="658" y="82" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#fbbf24">#1248</text>
+  <rect x="720" y="65" width="100" height="24" rx="6" fill="rgba(251,191,36,0.15)"/>
+  <text x="732" y="82" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#fbbf24">Feature</text>
+  <text x="840" y="82" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#737373">5 hours ago</text>
+
+  <rect x="650" y="102" width="500" height="14" rx="7" fill="rgba(231,238,247,0.18)"/>
+  <rect x="650" y="128" width="480" height="12" rx="6" fill="rgba(231,238,247,0.08)"/>
+  <rect x="650" y="150" width="440" height="12" rx="6" fill="rgba(231,238,247,0.08)"/>
+
+  <text x="650" y="195" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#fbbf24">CSV export is missing 3 columns we need for compliance</text>
+  <text x="650" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#93a4b7">Customer: Healthcare org, SOC2 audit in 2 weeks</text>
+
+  <text x="650" y="270" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#737373">Sentiment:</text>
+  <rect x="740" y="258" width="80" height="20" rx="4" fill="rgba(251,191,36,0.2)"/>
+  <text x="748" y="273" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#fbbf24">Urgent</text>
+  <text x="835" y="270" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#737373">Churn risk:</text>
+  <rect x="925" y="258" width="60" height="20" rx="4" fill="rgba(251,191,36,0.2)"/>
+  <text x="933" y="273" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#fbbf24">Med</text>
+
+  <!-- Ticket 3 -->
+  <rect x="40" y="360" width="560" height="300" rx="22" fill="#0f1621" stroke="rgba(255,255,255,0.12)"/>
+  <rect x="70" y="385" width="60" height="24" rx="6" fill="rgba(74,222,128,0.2)" stroke="rgba(74,222,128,0.3)"/>
+  <text x="78" y="402" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#4ade80">#1249</text>
+  <rect x="140" y="385" width="100" height="24" rx="6" fill="rgba(74,222,128,0.15)"/>
+  <text x="156" y="402" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#4ade80">Bug</text>
+  <text x="260" y="402" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#737373">1 day ago</text>
+
+  <rect x="70" y="422" width="500" height="14" rx="7" fill="rgba(231,238,247,0.18)"/>
+  <rect x="70" y="448" width="440" height="12" rx="6" fill="rgba(231,238,247,0.08)"/>
+
+  <text x="70" y="490" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#4ade80">Dark mode toggle resets on refresh — minor annoyance</text>
+  <text x="70" y="515" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#93a4b7">Customer: Free tier, single user</text>
+
+  <text x="70" y="590" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#737373">Sentiment:</text>
+  <rect x="160" y="578" width="80" height="20" rx="4" fill="rgba(74,222,128,0.2)"/>
+  <text x="170" y="593" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#4ade80">Mild</text>
+  <text x="255" y="590" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#737373">Churn risk:</text>
+  <rect x="345" y="578" width="60" height="20" rx="4" fill="rgba(74,222,128,0.2)"/>
+  <text x="357" y="593" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#4ade80">Low</text>
+
+  <!-- Ticket 4 -->
+  <rect x="620" y="360" width="560" height="300" rx="22" fill="#0f1621" stroke="rgba(255,255,255,0.12)"/>
+  <rect x="650" y="385" width="60" height="24" rx="6" fill="rgba(244,63,94,0.2)" stroke="rgba(244,63,94,0.3)"/>
+  <text x="658" y="402" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#fb7185">#1250</text>
+  <rect x="720" y="385" width="100" height="24" rx="6" fill="rgba(244,63,94,0.15)"/>
+  <text x="732" y="402" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#fb7185">Outage</text>
+  <text x="840" y="402" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#737373">20 min ago</text>
+
+  <rect x="650" y="422" width="500" height="14" rx="7" fill="rgba(231,238,247,0.18)"/>
+  <rect x="650" y="448" width="460" height="12" rx="6" fill="rgba(231,238,247,0.08)"/>
+  <rect x="650" y="470" width="480" height="12" rx="6" fill="rgba(231,238,247,0.08)"/>
+
+  <text x="650" y="510" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#fb7185">API returning 503 — our production pipeline is down</text>
+  <text x="650" y="535" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#93a4b7">Customer: Enterprise, $48k ARR, 200 seats</text>
+
+  <text x="650" y="590" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#737373">Sentiment:</text>
+  <rect x="740" y="578" width="80" height="20" rx="4" fill="rgba(244,63,94,0.2)"/>
+  <text x="750" y="593" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#fb7185">Critical</text>
+  <text x="835" y="590" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#737373">Churn risk:</text>
+  <rect x="925" y="578" width="60" height="20" rx="4" fill="rgba(244,63,94,0.2)"/>
+  <text x="933" y="593" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#fb7185">High</text>
+</svg>

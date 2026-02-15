@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+  <defs>
+    <linearGradient id="g" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f97316" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#0b0f14" stop-opacity="1"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="700" fill="url(#g)"/>
+  <rect x="80" y="60" width="1040" height="580" rx="26" fill="#0f1621" stroke="rgba(255,255,255,0.12)"/>
+
+  <!-- Sidebar: algorithm config -->
+  <rect x="100" y="80" width="260" height="540" rx="18" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.06)"/>
+  <text x="130" y="125" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="14" fill="#93a4b7">Recommendation Engine</text>
+
+  <text x="130" y="170" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#737373">User segment</text>
+  <rect x="130" y="180" width="200" height="34" rx="8" fill="rgba(249,115,22,0.12)" stroke="rgba(249,115,22,0.3)"/>
+  <text x="150" y="202" font-family="ui-sans-serif, system-ui" font-size="14" fill="#f97316">Age: 13–17</text>
+
+  <text x="130" y="245" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#737373">Content score</text>
+  <rect x="130" y="255" width="200" height="8" rx="4" fill="rgba(255,255,255,0.08)"/>
+  <rect x="130" y="255" width="140" height="8" rx="4" fill="rgba(249,115,22,0.5)"/>
+  <text x="130" y="285" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#93a4b7">Engagement: 0.72</text>
+
+  <text x="130" y="320" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#737373">Safety flags</text>
+  <rect x="130" y="332" width="90" height="26" rx="6" fill="rgba(249,115,22,0.15)" stroke="rgba(249,115,22,0.3)"/>
+  <text x="142" y="350" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#f97316">violence</text>
+  <rect x="230" y="332" width="100" height="26" rx="6" fill="rgba(249,115,22,0.15)" stroke="rgba(249,115,22,0.3)"/>
+  <text x="242" y="350" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#f97316">substance</text>
+
+  <rect x="130" y="390" width="200" height="44" rx="12" fill="rgba(249,115,22,0.15)" stroke="rgba(249,115,22,0.3)"/>
+  <text x="168" y="418" font-family="ui-sans-serif, system-ui" font-size="14" fill="#f97316">Surface to feed?</text>
+
+  <!-- Main content: the flagged item -->
+  <rect x="390" y="100" width="700" height="500" rx="18" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.06)"/>
+  <text x="420" y="140" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="13" fill="#93a4b7">Flagged content item</text>
+
+  <!-- Video thumbnail placeholder -->
+  <rect x="420" y="160" width="340" height="200" rx="14" fill="rgba(249,115,22,0.06)" stroke="rgba(249,115,22,0.12)"/>
+  <text x="530" y="270" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="16" fill="#93a4b7">Video thumbnail</text>
+  <rect x="435" y="330" width="60" height="20" rx="4" fill="rgba(0,0,0,0.5)"/>
+  <text x="445" y="345" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#e7eef7">3:42</text>
+
+  <!-- Metadata -->
+  <rect x="420" y="385" width="400" height="14" rx="7" fill="rgba(231,238,247,0.15)"/>
+  <rect x="420" y="412" width="300" height="12" rx="6" fill="rgba(231,238,247,0.08)"/>
+  <rect x="420" y="438" width="350" height="12" rx="6" fill="rgba(231,238,247,0.08)"/>
+
+  <!-- Tags -->
+  <rect x="420" y="475" width="80" height="24" rx="6" fill="rgba(239,68,68,0.15)" stroke="rgba(239,68,68,0.25)"/>
+  <text x="432" y="492" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#f87171">mature</text>
+  <rect x="510" y="475" width="95" height="24" rx="6" fill="rgba(251,191,36,0.15)" stroke="rgba(251,191,36,0.25)"/>
+  <text x="522" y="492" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#fbbf24">edgy humor</text>
+  <rect x="615" y="475" width="100" height="24" rx="6" fill="rgba(74,222,128,0.15)" stroke="rgba(74,222,128,0.25)"/>
+  <text x="627" y="492" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#4ade80">educational</text>
+
+  <!-- Decision panel -->
+  <rect x="790" y="160" width="270" height="380" rx="14" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.06)"/>
+  <text x="820" y="200" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="13" fill="#93a4b7">Model confidence</text>
+  <text x="820" y="230" font-family="ui-sans-serif, system-ui" font-size="28" fill="#e7eef7">68%</text>
+  <text x="820" y="255" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="11" fill="#fbbf24">Below auto-approve threshold</text>
+
+  <rect x="820" y="285" width="210" height="1" fill="rgba(255,255,255,0.06)"/>
+
+  <text x="820" y="315" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#93a4b7">Similar content decisions:</text>
+  <text x="820" y="345" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#4ade80">Approved: 12</text>
+  <text x="820" y="370" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#f87171">Blocked:  8</text>
+  <text x="820" y="395" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#fbbf24">Escalated: 3</text>
+
+  <rect x="820" y="430" width="210" height="40" rx="10" fill="rgba(74,222,128,0.2)" stroke="rgba(74,222,128,0.3)"/>
+  <text x="885" y="456" font-family="ui-sans-serif, system-ui" font-size="14" fill="#4ade80">Allow</text>
+  <rect x="820" y="485" width="210" height="40" rx="10" fill="rgba(239,68,68,0.2)" stroke="rgba(239,68,68,0.3)"/>
+  <text x="888" y="511" font-family="ui-sans-serif, system-ui" font-size="14" fill="#f87171">Block</text>
+</svg>

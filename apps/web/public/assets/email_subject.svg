@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#0b0f14" stop-opacity="1"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="700" fill="url(#g)"/>
+  <rect x="80" y="60" width="1040" height="580" rx="26" fill="#0f1621" stroke="rgba(255,255,255,0.12)"/>
+
+  <!-- Inbox mockup -->
+  <text x="120" y="115" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="13" fill="#93a4b7">Inbox preview — how it appears to recipients</text>
+
+  <!-- Email row A (the one being evaluated) -->
+  <rect x="120" y="140" width="960" height="72" rx="12" fill="rgba(6,182,212,0.08)" stroke="rgba(6,182,212,0.25)"/>
+  <circle cx="155" cy="176" r="18" fill="rgba(6,182,212,0.2)"/>
+  <text x="150" y="182" font-family="ui-sans-serif, system-ui" font-size="14" fill="#06b6d4">A</text>
+  <text x="190" y="168" font-family="ui-sans-serif, system-ui" font-size="16" font-weight="bold" fill="#e7eef7">🔥 You're LOSING money every day you wait — act NOW</text>
+  <text x="190" y="192" font-family="ui-sans-serif, system-ui" font-size="13" fill="#93a4b7">AcmeFin — Hi there, we noticed you haven't completed your portfolio setup...</text>
+
+  <!-- Email row B -->
+  <rect x="120" y="228" width="960" height="72" rx="12" fill="rgba(6,182,212,0.08)" stroke="rgba(6,182,212,0.25)"/>
+  <circle cx="155" cy="264" r="18" fill="rgba(6,182,212,0.2)"/>
+  <text x="150" y="270" font-family="ui-sans-serif, system-ui" font-size="14" fill="#06b6d4">B</text>
+  <text x="190" y="256" font-family="ui-sans-serif, system-ui" font-size="16" font-weight="bold" fill="#e7eef7">Your portfolio setup is 80% complete</text>
+  <text x="190" y="280" font-family="ui-sans-serif, system-ui" font-size="13" fill="#93a4b7">AcmeFin — Just one more step to start tracking your investments...</text>
+
+  <!-- Email row C -->
+  <rect x="120" y="316" width="960" height="72" rx="12" fill="rgba(6,182,212,0.08)" stroke="rgba(6,182,212,0.25)"/>
+  <circle cx="155" cy="352" r="18" fill="rgba(6,182,212,0.2)"/>
+  <text x="150" y="358" font-family="ui-sans-serif, system-ui" font-size="14" fill="#06b6d4">C</text>
+  <text x="190" y="344" font-family="ui-sans-serif, system-ui" font-size="16" font-weight="bold" fill="#e7eef7">Quick question about your financial goals</text>
+  <text x="190" y="368" font-family="ui-sans-serif, system-ui" font-size="13" fill="#93a4b7">AcmeFin — We'd love to help personalize your experience...</text>
+
+  <!-- Context panel -->
+  <rect x="120" y="415" width="460" height="200" rx="16" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.06)"/>
+  <text x="150" y="450" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="13" fill="#93a4b7">Campaign context</text>
+  <text x="150" y="480" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#737373">Audience: Users who signed up but</text>
+  <text x="150" y="500" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#737373">never completed onboarding (7d+)</text>
+  <text x="150" y="530" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#737373">Goal: Re-engagement, not hard sell</text>
+  <text x="150" y="555" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#737373">Brand tone: Professional, helpful</text>
+  <text x="150" y="580" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#737373">Industry: Fintech (regulated)</text>
+
+  <!-- Metrics panel -->
+  <rect x="600" y="415" width="480" height="200" rx="16" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.06)"/>
+  <text x="630" y="450" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="13" fill="#93a4b7">AI-predicted open rates</text>
+
+  <text x="630" y="485" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="14" fill="#f87171">A:  38%  (high urgency)</text>
+  <rect x="630" y="495" width="380" height="6" rx="3" fill="rgba(255,255,255,0.06)"/>
+  <rect x="630" y="495" width="250" height="6" rx="3" fill="rgba(248,113,113,0.5)"/>
+
+  <text x="630" y="530" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="14" fill="#4ade80">B:  31%  (progress nudge)</text>
+  <rect x="630" y="540" width="380" height="6" rx="3" fill="rgba(255,255,255,0.06)"/>
+  <rect x="630" y="540" width="200" height="6" rx="3" fill="rgba(74,222,128,0.5)"/>
+
+  <text x="630" y="575" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="14" fill="#06b6d4">C:  24%  (conversational)</text>
+  <rect x="630" y="585" width="380" height="6" rx="3" fill="rgba(255,255,255,0.06)"/>
+  <rect x="630" y="585" width="155" height="6" rx="3" fill="rgba(6,182,212,0.5)"/>
+</svg>
