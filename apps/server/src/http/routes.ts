@@ -7,18 +7,28 @@ import { CreateTaskRequestSchema, SubmitAnswerRequestSchema } from "@unblock/com
 import type { WsHub } from "../ws/hub";
 import type { TaskService } from "../tasks/service";
 import type { ServerEnv } from "../env";
+import type { EscrowService } from "../solana";
 
-export function makeRoutes(env: ServerEnv, tasks: TaskService, ws: WsHub) {
+export function makeRoutes(env: ServerEnv, tasks: TaskService, ws: WsHub, escrow: EscrowService) {
   const router = express.Router();
 
   router.get("/health", (_req, res) => res.json({ ok: true }));
 
-  router.post("/tasks", (req, res) => {
+  router.post("/tasks", async (req, res) => {
     const parsed = CreateTaskRequestSchema.safeParse(req.body as CreateTaskRequest);
     if (!parsed.success) return res.status(400).json({ error: "bad_body", issues: parsed.error.issues });
 
-    // Note: Solana verification/release/refund live under `src/solana/*`.
-    // For now, this route supports MOCK_SOLANA. Real verification is owned by Dev1.
+    if (parsed.data.lockTxSig && !env.mockSolana) {
+      const result = await escrow.verifyLockTx(
+        parsed.data.lockTxSig,
+        parsed.data.agentPubkey,
+        parsed.data.bountyLamports
+      );
+      if (!result.ok) {
+        return res.status(400).json({ error: "lock_tx_invalid", detail: result.error });
+      }
+    }
+
     const task = tasks.create(parsed.data);
     ws.broadcast({ type: "task.created", taskId: task.id });
     return res.json({ taskId: task.id, status: task.status });
@@ -52,10 +62,12 @@ export function makeRoutes(env: ServerEnv, tasks: TaskService, ws: WsHub) {
     }
   });
 
-  router.post("/tasks/:id/confirm", (req, res) => {
-    // Payment release is owned by Dev1; in MOCK mode we simulate.
-    const releaseTxSig = env.mockSolana ? `MOCK_RELEASE_${req.params.id}` : undefined;
+  router.post("/tasks/:id/confirm", async (req, res) => {
     try {
+      const task = tasks.get(req.params.id);
+      if (!task) return res.status(404).json({ error: "not_found" });
+
+      const releaseTxSig = await escrow.release(task);
       const updated = tasks.markConfirmedPaid(req.params.id, releaseTxSig);
       ws.broadcast({ type: "task.updated", taskId: updated.id, status: updated.status });
       return res.json({ status: updated.status, releaseTxSig });
@@ -64,9 +76,12 @@ export function makeRoutes(env: ServerEnv, tasks: TaskService, ws: WsHub) {
     }
   });
 
-  router.post("/tasks/:id/reject", (req, res) => {
-    const refundTxSig = env.mockSolana ? `MOCK_REFUND_${req.params.id}` : undefined;
+  router.post("/tasks/:id/reject", async (req, res) => {
     try {
+      const task = tasks.get(req.params.id);
+      if (!task) return res.status(404).json({ error: "not_found" });
+
+      const refundTxSig = await escrow.refund(task);
       const updated = tasks.markRejectedRefunded(req.params.id, refundTxSig);
       ws.broadcast({ type: "task.updated", taskId: updated.id, status: updated.status });
       return res.json({ status: updated.status, refundTxSig });
