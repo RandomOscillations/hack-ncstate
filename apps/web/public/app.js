@@ -60,6 +60,66 @@ const State = {
 const _statRefs = [];
 const _taskElements = new Map();
 let _detailFingerprint = "";
+let _initialLoad = true;
+
+// ── Skeleton Helpers ────────────────────────────────
+
+function renderSkeletons() {
+  // Stats skeleton
+  const stats = $("stats");
+  stats.innerHTML = "";
+  for (let i = 0; i < 6; i++) {
+    const cell = document.createElement("div");
+    cell.className = "skeleton-stat";
+    cell.innerHTML = `
+      <div class="skeleton skeleton-label"></div>
+      <div class="skeleton skeleton-number"></div>
+      <div class="skeleton skeleton-sub"></div>
+    `;
+    stats.appendChild(cell);
+  }
+
+  // Task list skeleton
+  const taskList = $("taskList");
+  taskList.innerHTML = "";
+  for (let i = 0; i < 5; i++) {
+    const item = document.createElement("div");
+    item.className = "skeleton-task-item";
+    item.style.animationDelay = `${i * 0.08}s`;
+    item.innerHTML = `
+      <div class="skeleton skeleton-title"></div>
+      <div class="skeleton-meta">
+        <div class="skeleton skeleton-bounty"></div>
+        <div class="skeleton skeleton-pill"></div>
+      </div>
+      <div class="skeleton-bottom">
+        <div class="skeleton skeleton-time"></div>
+        <div class="skeleton skeleton-id"></div>
+      </div>
+    `;
+    taskList.appendChild(item);
+  }
+
+  // Detail area skeleton
+  const detail = $("detail");
+  detail.innerHTML = "";
+  const skel = document.createElement("div");
+  skel.className = "skeleton-detail";
+  skel.innerHTML = `
+    <div class="skeleton-detail-header">
+      <div class="skeleton skeleton-detail-question"></div>
+      <div class="skeleton skeleton-detail-bounty"></div>
+    </div>
+    <div class="skeleton skeleton-detail-context"></div>
+    <div class="skeleton skeleton-detail-pill"></div>
+    <div class="skeleton-detail-images">
+      <div class="skeleton skeleton-detail-img"></div>
+      <div class="skeleton skeleton-detail-img"></div>
+    </div>
+    <div class="skeleton skeleton-detail-textarea"></div>
+  `;
+  detail.appendChild(skel);
+}
 
 function nowMs() {
   return Date.now();
@@ -319,22 +379,22 @@ function createTaskItemEl(t) {
   const bountyEl = document.createElement("span");
   bountyEl.className = "task-item-bounty";
 
-  const timeEl = document.createElement("span");
-  timeEl.className = "task-item-time";
+  const pillEl = document.createElement("span");
+  pillEl.className = "status-pill";
 
   meta.appendChild(bountyEl);
-  meta.appendChild(timeEl);
+  meta.appendChild(pillEl);
 
   const bottom = document.createElement("div");
   bottom.className = "task-item-bottom";
 
-  const pillEl = document.createElement("span");
-  pillEl.className = "status-pill";
+  const timeEl = document.createElement("span");
+  timeEl.className = "task-item-time";
 
   const idEl = document.createElement("span");
   idEl.className = "task-item-id";
 
-  bottom.appendChild(pillEl);
+  bottom.appendChild(timeEl);
   bottom.appendChild(idEl);
 
   el.appendChild(titleEl);
@@ -459,7 +519,8 @@ function getTaskFingerprint(task) {
     task.id, task.status, task.bountyLamports,
     task.resolverPubkey || "", task.lockTxSig || "",
     task.releaseTxSig || "", task.refundTxSig || "",
-    task.supervisorScore ?? "", task.supervisorReasoning || "",
+    task.supervisorScore ? task.supervisorScore.score : "",
+    task.supervisorScore ? task.supervisorScore.reasoning || "" : "",
     task.fulfillment ? task.fulfillment.fulfillmentText : "",
   ].join("|");
 }
@@ -484,6 +545,14 @@ function renderDetail() {
 
   root.innerHTML = "";
 
+  // Two-column layout: main content left, score/verification right
+  const columns = document.createElement("div");
+  columns.className = "detail-columns";
+  const mainCol = document.createElement("div");
+  mainCol.className = "detail-main";
+  const sideCol = document.createElement("div");
+  sideCol.className = "detail-sidebar";
+
   // Header: question + bounty
   const header = document.createElement("div");
   header.className = "detail-header";
@@ -505,14 +574,14 @@ function renderDetail() {
 
   header.appendChild(questionEl);
   header.appendChild(bountyTag);
-  root.appendChild(header);
+  mainCol.appendChild(header);
 
   // Context
   if (task.context) {
     const ctx = document.createElement("div");
     ctx.className = "detail-context";
     ctx.textContent = task.context;
-    root.appendChild(ctx);
+    mainCol.appendChild(ctx);
   }
 
   // Status pill
@@ -528,7 +597,7 @@ function renderDetail() {
     autoBadge.textContent = "Auto-Approved";
     pillWrap.appendChild(autoBadge);
   }
-  root.appendChild(pillWrap);
+  mainCol.appendChild(pillWrap);
 
   // Images
   if ((task.imageUrls || []).length) {
@@ -541,7 +610,7 @@ function renderDetail() {
       img.onclick = () => openModal(`Page ${idx === 0 ? "A" : "B"}`, u);
       imgs.appendChild(img);
     });
-    root.appendChild(imgs);
+    mainCol.appendChild(imgs);
   }
 
   // Answer zone for OPEN tasks
@@ -601,12 +670,12 @@ function renderDetail() {
 
     actions.appendChild(btn);
     zone.appendChild(actions);
-    root.appendChild(zone);
+    mainCol.appendChild(zone);
   } else if (task.status === "ANSWERED") {
     const msg = document.createElement("div");
     msg.className = "waiting-msg";
     msg.textContent = "Waiting for agent to confirm and release payment...";
-    root.appendChild(msg);
+    mainCol.appendChild(msg);
   }
 
   // Fulfillment card for tasks that have fulfillment data
@@ -618,10 +687,28 @@ function renderDetail() {
     lbl.textContent = "Fulfillment" + (task.fulfillment.subscriberPubkey ? " by " + short(task.fulfillment.subscriberPubkey, 6) : "");
     card.appendChild(lbl);
     const txt = document.createElement("div");
-    txt.className = "text";
+    txt.className = "text fulfillment-text";
     txt.textContent = task.fulfillment.fulfillmentText || "";
     card.appendChild(txt);
-    root.appendChild(card);
+
+    const toggle = document.createElement("button");
+    toggle.className = "score-reasoning-toggle";
+    toggle.textContent = "Show more";
+    toggle.style.display = "none";
+    card.appendChild(toggle);
+
+    requestAnimationFrame(() => {
+      if (txt.scrollHeight > txt.clientHeight) {
+        toggle.style.display = "";
+      }
+    });
+
+    toggle.onclick = () => {
+      const expanded = txt.classList.toggle("expanded");
+      toggle.textContent = expanded ? "Show less" : "Show more";
+    };
+
+    mainCol.appendChild(card);
   }
 
   // Supervisor score bar for SCORED / UNDER_REVIEW / VERIFIED_PAID / DISPUTED
@@ -641,7 +728,7 @@ function renderDetail() {
     const scoreVal = document.createElement("span");
     scoreVal.style.fontFamily = "var(--font-mono)";
     scoreVal.style.fontWeight = "700";
-    const sv = Number(task.supervisorScore);
+    const sv = Number(task.supervisorScore.score);
     scoreVal.textContent = sv + " / 100";
 
     const passBadge = document.createElement("span");
@@ -664,17 +751,32 @@ function renderDetail() {
     bar.appendChild(fill);
     container.appendChild(bar);
 
-    if (task.supervisorReasoning) {
+    if (task.supervisorScore.reasoning) {
       const reason = document.createElement("div");
-      reason.style.marginTop = "8px";
-      reason.style.fontSize = "var(--text-sm)";
-      reason.style.color = "var(--text-secondary)";
-      reason.style.lineHeight = "1.5";
-      reason.textContent = task.supervisorReasoning;
+      reason.className = "score-reasoning";
+      reason.textContent = task.supervisorScore.reasoning;
       container.appendChild(reason);
+
+      const toggle = document.createElement("button");
+      toggle.className = "score-reasoning-toggle";
+      toggle.textContent = "Show more";
+      toggle.style.display = "none";
+      container.appendChild(toggle);
+
+      // Only show toggle if text is actually clamped
+      requestAnimationFrame(() => {
+        if (reason.scrollHeight > reason.clientHeight) {
+          toggle.style.display = "";
+        }
+      });
+
+      toggle.onclick = () => {
+        const expanded = reason.classList.toggle("expanded");
+        toggle.textContent = expanded ? "Show less" : "Show more";
+      };
     }
 
-    root.appendChild(container);
+    sideCol.appendChild(container);
   }
 
   // Verification form for UNDER_REVIEW tasks
@@ -689,14 +791,24 @@ function renderDetail() {
     // Score slider
     const scoreGroup = document.createElement("div");
     scoreGroup.className = "form-group";
-    const scoreLabelEl = document.createElement("label");
-    scoreLabelEl.textContent = "Ground Truth Score";
-    scoreGroup.appendChild(scoreLabelEl);
 
-    const scoreDisplay = document.createElement("div");
-    scoreDisplay.className = "score-display";
-    scoreDisplay.textContent = "50";
-    scoreGroup.appendChild(scoreDisplay);
+    const scoreLabelRow = document.createElement("div");
+    scoreLabelRow.className = "score-bar-label";
+
+    const scoreLabelEl = document.createElement("span");
+    scoreLabelEl.style.fontFamily = "var(--font-body)";
+    scoreLabelEl.style.fontSize = "var(--text-sm)";
+    scoreLabelEl.style.fontWeight = "600";
+    scoreLabelEl.textContent = "Ground Truth Score";
+
+    const scoreDisplay = document.createElement("span");
+    scoreDisplay.style.fontFamily = "var(--font-mono)";
+    scoreDisplay.style.fontWeight = "700";
+    scoreDisplay.textContent = "50 / 100";
+
+    scoreLabelRow.appendChild(scoreLabelEl);
+    scoreLabelRow.appendChild(scoreDisplay);
+    scoreGroup.appendChild(scoreLabelRow);
 
     const slider = document.createElement("input");
     slider.type = "range";
@@ -704,7 +816,7 @@ function renderDetail() {
     slider.max = "100";
     slider.value = "50";
     slider.addEventListener("input", () => {
-      scoreDisplay.textContent = slider.value;
+      scoreDisplay.textContent = slider.value + " / 100";
     });
     scoreGroup.appendChild(slider);
     form.appendChild(scoreGroup);
@@ -794,14 +906,14 @@ function renderDetail() {
 
     actions.appendChild(submitBtn);
     form.appendChild(actions);
-    root.appendChild(form);
+    sideCol.appendChild(form);
   }
 
-  // Metadata
-  const metaSection = document.createElement("div");
+  // Metadata (collapsible)
+  const metaSection = document.createElement("details");
   metaSection.className = "detail-meta";
 
-  const metaTitle = document.createElement("div");
+  const metaTitle = document.createElement("summary");
   metaTitle.className = "meta-title";
   metaTitle.textContent = "Metadata";
   metaSection.appendChild(metaTitle);
@@ -817,7 +929,14 @@ function renderDetail() {
   if (task.refundTxSig) grid.appendChild(kvRow("Refund tx", linkTx(task.refundTxSig)));
 
   metaSection.appendChild(grid);
-  root.appendChild(metaSection);
+  mainCol.appendChild(metaSection);
+
+  // Assemble columns
+  columns.appendChild(mainCol);
+  if (sideCol.childNodes.length > 0) {
+    columns.appendChild(sideCol);
+  }
+  root.appendChild(columns);
 }
 
 // ── Render: Agent Pool ──────────────────────────────
@@ -985,7 +1104,6 @@ function setActiveTab(filter) {
     }
     State.view = "agents";
     $("agentsBtn").classList.add("active");
-    $("taskRail").style.display = "none";
     $("detail").style.display = "none";
     $("agentPool").style.display = "block";
     renderAgentPool();
@@ -1006,7 +1124,6 @@ function setActiveTab(filter) {
 function showTasksView() {
   State.view = "tasks";
   $("agentsBtn").classList.remove("active");
-  $("taskRail").style.display = "";
   $("detail").style.display = "";
   $("agentPool").style.display = "none";
   renderTaskList();
@@ -1052,6 +1169,14 @@ async function refresh() {
       else if (trustData && Array.isArray(trustData)) State.trustScores = trustData;
       if (State.view === "agents") renderAgentPool();
     });
+
+    if (_initialLoad) {
+      _initialLoad = false;
+      // Clear skeletons on first successful load
+      _statRefs.length = 0;
+      _taskElements.clear();
+      _detailFingerprint = "";
+    }
 
     renderStats();
     if (State.view === "tasks") {
@@ -1164,7 +1289,8 @@ function boot() {
     openSettings();
   };
 
-  // Default state
+  // Show skeletons immediately, then load real data
+  renderSkeletons();
   setActiveTab("open");
   connectWs();
   refresh();
