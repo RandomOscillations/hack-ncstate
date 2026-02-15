@@ -21,6 +21,7 @@ export type AgentEnv = {
   agentKeypairPath: string;
   escrowPubkey?: string;
   solanaRpcUrl: string;
+  invokeLlm: boolean;
   pollIntervalMs: number;
   pollTimeoutMs: number;
 };
@@ -41,6 +42,7 @@ export function loadEnv(): AgentEnv {
     geminiModel: process.env.GEMINI_MODEL || "gemini-2.5-pro",
     showPrompts: (process.env.SHOW_PROMPTS || "0") === "1",
     reasoningTest: (process.env.REASONING_TEST || "0") === "1",
+    invokeLlm: (process.env.INVOKE_LLM || "0") === "1",
     agentKeypairPath:
       process.env.AGENT_KEYPAIR_PATH || path.resolve(process.cwd(), "../../.secrets/agent.json"),
     escrowPubkey: process.env.ESCROW_PUBKEY || undefined,

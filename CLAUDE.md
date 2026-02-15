@@ -62,6 +62,98 @@ Deliver a reliable live demo:
 - `POST /api/tasks/:id/confirm` (agent confirm + release)
 - `POST /api/tasks/:id/reject` (agent reject + refund)
 
+## Running the Project
+
+### Prerequisites
+
+- Node.js 18+ and npm
+- Git
+
+### Quick Start (Demo Mode)
+
+Works on both Windows and Mac. Demo mode uses cached LLM outputs and mock Solana — no API keys or wallets needed.
+
+```bash
+# 1. Install dependencies (from repo root)
+npm install
+
+# 2. Copy env files
+# Mac/Linux:
+cp apps/server/.env.example apps/server/.env
+cp apps/agent/.env.example apps/agent/.env
+# Windows (cmd):
+copy apps\server\.env.example apps\server\.env
+copy apps\agent\.env.example apps\agent\.env
+
+# 3. Start the server (terminal 1)
+npm run dev:server
+
+# 4. Run the agent (terminal 2)
+npm run dev:agent
+
+# 5. Open the UI
+#    http://localhost:4000
+```
+
+### Running with Live LLM
+
+Set `DEMO_CACHE=0` in `apps/agent/.env` and provide an API key for your chosen provider:
+
+```env
+DEMO_CACHE=0
+LLM_PROVIDER=gemini          # or "openai" or "anthropic"
+GEMINI_API_KEY=your-key-here  # match the provider above
+```
+
+### Running with Real Solana (Devnet)
+
+```bash
+# 1. Generate keypairs
+npm run scripts:gen-keypairs
+
+# 2. Airdrop devnet SOL to agent
+npm run scripts:prefund-agent
+
+# 3. Print escrow pubkey (set in apps/agent/.env as ESCROW_PUBKEY)
+npm run scripts:print-pubkey -- escrow
+
+# 4. Set MOCK_SOLANA=0 in both apps/server/.env and apps/agent/.env
+```
+
+### Build & Typecheck
+
+```bash
+npm run build      # Compile all workspaces
+npm run typecheck  # Type-check all workspaces
+npm test           # typecheck + build
+```
+
+### Server Environment (`apps/server/.env`)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `4000` | Server listen port |
+| `MOCK_SOLANA` | `1` | Skip real Solana transactions |
+| `RESOLVER_DEMO_TOKEN` | _(empty)_ | Optional auth token for answer submission |
+| `ESCROW_KEYPAIR_PATH` | `../../.secrets/escrow.json` | Path to escrow keypair (real Solana only) |
+| `SOLANA_RPC_URL` | `https://api.devnet.solana.com` | Solana RPC endpoint |
+
+### Agent Environment (`apps/agent/.env`)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SERVER_BASE_URL` | `http://localhost:4000` | Server endpoint |
+| `DEMO_CACHE` | `1` | Use cached LLM outputs |
+| `MOCK_SOLANA` | `1` | Use mock Solana lock tx |
+| `BOUNTY_LAMPORTS` | `50000000` | Bounty amount (0.05 SOL) |
+| `AGENT_PUBKEY` | `demo-agent` | Agent wallet address |
+| `LLM_PROVIDER` | `openai` | `openai`, `anthropic`, or `gemini` |
+| `OPENAI_API_KEY` | _(empty)_ | Required when provider=openai |
+| `ANTHROPIC_API_KEY` | _(empty)_ | Required when provider=anthropic |
+| `GEMINI_API_KEY` | _(empty)_ | Required when provider=gemini |
+| `POLL_INTERVAL_MS` | `2000` | How often agent polls for answer |
+| `POLL_TIMEOUT_MS` | `300000` | Max wait before timeout (5 min) |
+
 ## Coding Conventions
 
 - Prefer TypeScript for server and agent.

@@ -1,56 +1,44 @@
+import fs from "node:fs";
+import path from "node:path";
 import type { AgentEnv } from "./env";
+import prompts from "./prompts.json";
 
 export type LlmResult = { text: string };
 
 // ---------------------------------------------------------------------------
-// Cached outputs for DEMO_CACHE mode (no API key required)
+// LLM response cache — reads/writes apps/agent/src/llm-cache.json
+// When INVOKE_LLM=0 (default), responses are served from cache.
+// When INVOKE_LLM=1, API is called and responses are saved to cache.
 // ---------------------------------------------------------------------------
 
-const CACHED_REASONING_PROBE = `Reasoning Probe (Fintech Risk Check):
-{
-  "candidates": [
-    { "name": "A", "monthlyIncome": 8000, "monthlyDebt": 1800, "dti": 0.225, "notes": ["low DTI", "healthy buffer"] },
-    { "name": "B", "monthlyIncome": 5400, "monthlyDebt": 2600, "dti": 0.481, "notes": ["high DTI", "tight cashflow"] },
-    { "name": "C", "monthlyIncome": 9500, "monthlyDebt": 4100, "dti": 0.432, "notes": ["moderate-high DTI", "higher income helps"] }
-  ],
-  "decision": "A",
-  "rationale": [
-    "A has the lowest debt-to-income ratio and best affordability margin.",
-    "B is above typical underwriting DTI thresholds and is riskiest.",
-    "C is viable but still materially higher DTI than A."
-  ],
-  "confidence": 0.78
-}`;
+const CACHE_PATH = path.resolve(__dirname, "../src/llm-cache.json");
 
-const CACHED_STEP1 = `Landing Page A Analysis:
-  - Clean minimalist layout with strong visual hierarchy
-  - Clear CTA button above the fold
-  - Trust indicators (security badges, partner logos) visible
-  - Potential issue: onboarding form has 6 fields - may cause drop-off
-  - Color palette is professional but could feel cold to younger demographics`;
+type LlmCache = Record<string, string>;
 
-const CACHED_STEP2 = `Landing Page B Analysis:
-  - Bold, modern design with animated micro-interactions
-  - Progressive disclosure - starts with email-only, expands after
-  - Social proof section with real user testimonials
-  - Potential issue: heavy animations may hurt performance on mobile
-  - Warmer color palette, feels more approachable`;
+function loadCache(): LlmCache {
+  try {
+    return JSON.parse(fs.readFileSync(CACHE_PATH, "utf-8"));
+  } catch {
+    return {};
+  }
+}
 
-const CACHED_AMBIGUITY = `Both pages have clear strengths. Page A optimizes for trust and information density. Page B optimizes for engagement and progressive onboarding.
+function saveCache(cache: LlmCache): void {
+  fs.writeFileSync(CACHE_PATH, JSON.stringify(cache, null, 2), "utf-8");
+}
 
-I cannot confidently determine which provides better UX without human visual judgment - the trade-off between "trust-first" and "engagement-first" depends on subjective design perception that I may hallucinate on.
+function getCached(key: string): string | undefined {
+  return loadCache()[key];
+}
 
--> Escalating to human resolver with both screenshots for side-by-side comparison.`;
+function setCached(key: string, value: string): void {
+  const cache = loadCache();
+  cache[key] = value;
+  saveCache(cache);
+}
 
-function cachedFinal(humanAnswer: string): string {
-  return `Final Analysis (incorporating human feedback):
-
-Human resolver's assessment: "${humanAnswer}"
-
-Recommendation: Based on the LLM analysis of both pages' structural strengths combined with the human resolver's visual/UX judgment, the preferred landing page has been identified. The agent can now proceed with the workflow using this validated decision.
-
-Cost: 0.05 SOL bounty paid to human resolver.
-Result: Avoided potential hallucination on subjective visual comparison.`;
+function renderFinal(humanAnswer: string): string {
+  return prompts.finalStep.replace("{{humanAnswer}}", humanAnswer);
 }
 
 // ---------------------------------------------------------------------------
@@ -125,61 +113,41 @@ async function callLlm(env: AgentEnv, prompt: string): Promise<string> {
 // Public step functions (cache-aware)
 // ---------------------------------------------------------------------------
 
-export async function runReasoningProbe(env: AgentEnv): Promise<LlmResult> {
-  if (env.demoCache) return { text: CACHED_REASONING_PROBE };
-  const prompt =
-    "You are a fintech risk analyst. Solve this underwriting reasoning check.\n\n" +
-    "Three candidates want the same $10k personal loan. Compute monthly income, DTI, and pick the safest.\n" +
-    "- Candidate A: income $96,000/yr, monthly debt payments $1,800\n" +
-    "- Candidate B: income $64,800/yr, monthly debt payments $2,600\n" +
-    "- Candidate C: income $114,000/yr, monthly debt payments $4,100\n\n" +
-    "Return ONLY JSON with this shape:\n" +
-    "{\n" +
-    '  "candidates":[{"name":"A","monthlyIncome":number,"monthlyDebt":number,"dti":number,"notes":[string]}],\n' +
-    '  "decision":"A|B|C",\n' +
-    '  "rationale":[string],\n' +
-    '  "confidence":number\n' +
-    "}\n" +
-    "Use dti = monthlyDebt/monthlyIncome rounded to 3 decimals. Confidence 0..1.\n";
+async function cachedCallLlm(env: AgentEnv, key: string, prompt: string): Promise<string> {
+  if (!env.invokeLlm) {
+    const hit = getCached(key);
+    if (hit) {
+      console.log(`[agent] cache hit for "${key}"`);
+      return hit;
+    }
+    throw new Error(`No cache entry for "${key}". Run with INVOKE_LLM=1 to populate.`);
+  }
   const text = await callLlm(env, prompt);
+  setCached(key, text);
+  console.log(`[agent] cached response for "${key}"`);
+  return text;
+}
+
+export async function runReasoningProbe(env: AgentEnv): Promise<LlmResult> {
+  const text = await cachedCallLlm(env, "reasoningProbe", prompts.reasoningProbe);
   return { text };
 }
 
 export async function runStep1(env: AgentEnv): Promise<LlmResult> {
-  if (env.demoCache) return { text: CACHED_STEP1 };
-  const text = await callLlm(
-    env,
-    "You are a UX analyst. Analyze the strengths and weaknesses of a fintech onboarding " +
-      "landing page (Page A). It has a clean minimalist layout, a clear CTA above the fold, " +
-      "security badges, but a 6-field form. Keep your analysis to 5 bullet points."
-  );
+  const text = await cachedCallLlm(env, "step1", prompts.step1);
   return { text };
 }
 
 export async function runStep2(env: AgentEnv): Promise<LlmResult> {
-  if (env.demoCache) return { text: CACHED_STEP2 };
-  const text = await callLlm(
-    env,
-    "You are a UX analyst. Analyze the strengths and weaknesses of a fintech onboarding " +
-      "landing page (Page B). It has bold modern design with micro-interactions, progressive " +
-      "disclosure starting with email-only, user testimonials, but heavy animations. " +
-      "Keep your analysis to 5 bullet points."
-  );
+  const text = await cachedCallLlm(env, "step2", prompts.step2);
   return { text };
 }
 
 export async function runAmbiguityCheck(env: AgentEnv): Promise<LlmResult> {
-  if (env.demoCache) return { text: CACHED_AMBIGUITY };
-  const text = await callLlm(
-    env,
-    "You analyzed two landing pages. Page A: trust-focused, clean, 6-field form. " +
-      "Page B: engagement-focused, progressive disclosure, heavy animations. " +
-      "You cannot confidently pick which has better UX without human visual judgment. " +
-      "Explain why you're escalating to a human resolver. Keep it to 3 short paragraphs."
-  );
+  const text = await cachedCallLlm(env, "ambiguityCheck", prompts.ambiguityCheck);
   return { text };
 }
 
 export function runFinalStep(_env: AgentEnv, humanAnswer: string): LlmResult {
-  return { text: cachedFinal(humanAnswer) };
+  return { text: renderFinal(humanAnswer) };
 }
