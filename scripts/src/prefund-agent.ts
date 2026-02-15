@@ -22,8 +22,25 @@ async function main() {
   const agent = loadKeypair(agentPath);
   const conn = new Connection(rpcUrl, "confirmed");
 
-  console.log(`[scripts] requesting airdrop: ${airdropSol} SOL -> ${agent.publicKey.toBase58()}`);
-  const sig = await conn.requestAirdrop(agent.publicKey, airdropSol * LAMPORTS_PER_SOL);
+  const agentPubkey = agent.publicKey.toBase58();
+  console.log(`[scripts] requesting airdrop: ${airdropSol} SOL -> ${agentPubkey}`);
+
+  let sig: string;
+  try {
+    sig = await conn.requestAirdrop(agent.publicKey, airdropSol * LAMPORTS_PER_SOL);
+  } catch (e: any) {
+    const msg = String(e?.message || e);
+    if (msg.includes("429") || msg.toLowerCase().includes("airdrop limit")) {
+      console.error("[scripts] airdrop rate-limited / faucet dry.");
+      console.error(`[scripts] agent pubkey: ${agentPubkey}`);
+      console.error("[scripts] options:");
+      console.error("- Use the official faucet: https://faucet.solana.com (devnet) and fund the pubkey above");
+      console.error("- Or have a teammate transfer devnet SOL to the pubkey above");
+      console.error("- Or run the project in MOCK_SOLANA=1 mode (no on-chain transfers needed)");
+      process.exit(2);
+    }
+    throw e;
+  }
   console.log(`[scripts] airdrop sig: ${sig}`);
 
   const latest = await conn.getLatestBlockhash("confirmed");
@@ -35,4 +52,3 @@ main().catch((e) => {
   console.error("[scripts] fatal:", e);
   process.exit(1);
 });
-
