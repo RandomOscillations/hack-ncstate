@@ -7,7 +7,9 @@
     "scripts"
   ],
   "scripts": {
+    "predev:server": "npm -w @unblock/common run build",
     "dev:server": "npm -w apps/server run dev",
+    "predev:agent": "npm -w @unblock/common run build",
     "dev:agent": "npm -w apps/agent run dev",
     "build": "npm -w packages/common run build && npm -w apps/server run build && npm -w apps/agent run build",
     "typecheck": "npm -w packages/common run typecheck && npm -w apps/server run typecheck && npm -w apps/agent run typecheck",
@@ -21,4 +23,3 @@
     "typescript": "^5.6.3"
   }
 }
-
