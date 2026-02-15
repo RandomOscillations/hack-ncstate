@@ -7,6 +7,7 @@ import { TaskStore } from "./tasks/store";
 import { TaskService } from "./tasks/service";
 import { WsHub } from "./ws/hub";
 import { makeRoutes } from "./http/routes";
+import { createMockEscrow, createSolanaEscrow } from "./solana/escrow";
 
 const env = loadEnv();
 
@@ -20,8 +21,12 @@ const ws = new WsHub(server);
 const store = new TaskStore();
 const tasks = new TaskService(store, { nowMs: () => Date.now() });
 
+const escrow = env.mockSolana
+  ? createMockEscrow()
+  : createSolanaEscrow(env.solanaRpcUrl, env.escrowKeypairPath);
+
 // API routes
-app.use("/api", makeRoutes(env, tasks, ws));
+app.use("/api", makeRoutes(env, tasks, ws, escrow));
 
 // Static UI + assets
 app.use(express.static(env.webPublicDir));
