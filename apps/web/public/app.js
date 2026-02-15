@@ -62,6 +62,31 @@ const _taskElements = new Map();
 let _detailFingerprint = "";
 let _initialLoad = true;
 
+// ── Simple Markdown Renderer ────────────────────────
+
+function renderSimpleMarkdown(text) {
+  if (!text) return "";
+  // Escape HTML
+  const esc = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  return esc
+    // Bold: **text** or __text__
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/__(.+?)__/g, "<strong>$1</strong>")
+    // Italic: *text* or _text_ (not inside bold)
+    .replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, "<em>$1</em>")
+    // Numbered lists: lines starting with "1. ", "2. " etc.
+    .replace(/^(\d+)\.\s+(.+)$/gm, '<div class="md-list-item"><span class="md-list-num">$1.</span> $2</div>')
+    // Bullet lists: lines starting with "- " or "* "
+    .replace(/^[-*]\s+(.+)$/gm, '<div class="md-list-item"><span class="md-list-bullet">&bull;</span> $1</div>')
+    // Paragraph breaks (2+ newlines) → spaced gap
+    .replace(/\n{2,}/g, '<div class="md-para-break"></div>')
+    // Line breaks (single newline) → <br>
+    .replace(/\n/g, "<br>");
+}
+
 // ── Skeleton Helpers ────────────────────────────────
 
 function renderSkeletons() {
@@ -688,7 +713,7 @@ function renderDetail() {
     card.appendChild(lbl);
     const txt = document.createElement("div");
     txt.className = "text fulfillment-text";
-    txt.textContent = task.fulfillment.fulfillmentText || "";
+    txt.innerHTML = renderSimpleMarkdown(task.fulfillment.fulfillmentText || "");
     card.appendChild(txt);
 
     const toggle = document.createElement("button");
