@@ -33,6 +33,7 @@ const State = {
   selectedTaskId: null,
   activity: [],
   wsConnected: false,
+  draftsByTaskId: {},
 };
 
 function nowMs() {
@@ -92,6 +93,19 @@ function toast(title, body) {
   el.querySelector(".toastBody").textContent = body || "";
   root.appendChild(el);
   setTimeout(() => el.remove(), 3500);
+}
+
+function isTypingAnswer() {
+  const el = document.activeElement;
+  return el && el.id === "answerDraft";
+}
+
+function saveDraftFromDom() {
+  const taskId = State.selectedTaskId;
+  if (!taskId) return;
+  const ta = document.getElementById("answerDraft");
+  if (!ta) return;
+  State.draftsByTaskId[taskId] = ta.value || "";
 }
 
 function pushActivity(kind, msg, meta) {
@@ -330,7 +344,12 @@ function renderDetail() {
     const row = document.createElement("div");
     row.className = "answerRow";
     const ta = document.createElement("textarea");
+    ta.id = "answerDraft";
     ta.placeholder = "Answer briefly. Explain the tradeoff.";
+    ta.value = State.draftsByTaskId[task.id] || "";
+    ta.addEventListener("input", () => {
+      State.draftsByTaskId[task.id] = ta.value || "";
+    });
     const btn = document.createElement("button");
     btn.className = "btn";
     btn.textContent = "Submit Answer";
@@ -353,6 +372,8 @@ function renderDetail() {
           toast("Submit failed", String(resp.error));
           pushActivity("error", "Answer submit failed", String(resp.error));
         } else {
+          // Clear draft on success so it doesn't linger if we switch back to this task.
+          State.draftsByTaskId[task.id] = "";
           toast("Answer submitted", `Task ${short(task.id, 5)} is now ANSWERED`);
           pushActivity("answer", "Answer submitted", `task=${short(task.id, 5)}`);
         }
@@ -464,13 +485,17 @@ function beep() {
 
 async function refresh() {
   try {
+    // Preserve in-progress typing across polling/WS refreshes.
+    saveDraftFromDom();
+
     const data = await API.listTasks();
     const prevIds = new Set(State.tasks.map((t) => t.id));
     State.tasks = (data && data.tasks) || [];
 
     renderStats();
     renderTaskList();
-    renderDetail();
+    // Avoid destroying the textarea while the user is typing.
+    if (!isTypingAnswer()) renderDetail();
 
     // New task detection (for sound/toast)
     const newOnes = State.tasks.filter((t) => !prevIds.has(t.id));
@@ -557,4 +582,3 @@ function boot() {
 }
 
 boot();
-
