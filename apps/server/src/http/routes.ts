@@ -1,8 +1,5 @@
 import express from "express";
-import type {
-  CreateTaskRequest,
-  SubmitAnswerRequest
-} from "@unblock/common";
+import type { CreateTaskRequest, SubmitAnswerRequest } from "@unblock/common";
 import { CreateTaskRequestSchema, SubmitAnswerRequestSchema } from "@unblock/common";
 import type { WsHub } from "../ws/hub";
 import type { TaskService } from "../tasks/service";
@@ -92,3 +89,4 @@ export function makeRoutes(env: ServerEnv, tasks: TaskService, ws: WsHub, escrow
 
   return router;
 }
+

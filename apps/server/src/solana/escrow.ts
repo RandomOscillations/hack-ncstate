@@ -68,17 +68,9 @@ export class EscrowService {
       let foundValidTransfer = false;
 
       for (const ix of instructions) {
-        if (
-          "parsed" in ix &&
-          ix.program === "system" &&
-          ix.parsed?.type === "transfer"
-        ) {
-          const info = ix.parsed.info;
-          if (
-            info.source === agentPubkey &&
-            info.destination === escrowPubkey &&
-            info.lamports >= bountyLamports
-          ) {
+        if ("parsed" in ix && ix.program === "system" && ix.parsed?.type === "transfer") {
+          const info = (ix.parsed as any).info;
+          if (info.source === agentPubkey && info.destination === escrowPubkey && info.lamports >= bountyLamports) {
             foundValidTransfer = true;
             break;
           }
@@ -95,9 +87,7 @@ export class EscrowService {
     }
   }
 
-  /**
-   * Release bounty from escrow to the resolver.
-   */
+  /** Release bounty from escrow to the resolver. */
   async release(task: Task): Promise<string> {
     if (this.mock) {
       const sig = `MOCK_RELEASE_${task.id}`;
@@ -114,9 +104,7 @@ export class EscrowService {
     return sig;
   }
 
-  /**
-   * Refund bounty from escrow back to the agent.
-   */
+  /** Refund bounty from escrow back to the agent. */
   async refund(task: Task): Promise<string> {
     if (this.mock) {
       const sig = `MOCK_REFUND_${task.id}`;
@@ -154,3 +142,4 @@ function loadKeypair(filePath: string): Keypair {
   const secret = Uint8Array.from(JSON.parse(raw));
   return Keypair.fromSecretKey(secret);
 }
+
