@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Unblock.Agent Resolver</title>
+    <title>Kova Resolver</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -13,22 +13,19 @@
     <header class="header">
       <div class="brand">
         <button class="rail-toggle" id="railToggle" title="Toggle task list">&#9776;</button>
-        <div class="logo">UA</div>
+        <div class="logo">K</div>
         <div>
-          <div class="brand-name">Unblock<span class="brand-dot">.</span>Agent</div>
-          <div class="brand-sub">Resolver Console // Devnet</div>
+          <div class="brand-name">Kov<span class="brand-dot-wrap">a<span class="brand-dot-sup conn-dot" id="connDot"><span class="brand-dot-tooltip" id="statusText">Starting...</span></span></span></div>
+          <div class="brand-sub">Master Console</div>
         </div>
       </div>
 
       <div class="header-right">
-        <div class="conn-indicator">
-          <span class="conn-dot" id="connDot"></span>
-          <span class="conn-label" id="statusText">Starting...</span>
-        </div>
         <button class="btn-secondary" id="activityBtn">Activity</button>
         <button class="btn-secondary" id="ledgerBtn">Ledger</button>
         <button class="btn-secondary" id="agentsBtn">Agents</button>
         <button class="btn-secondary btn-sq" id="refreshBtn" title="Refresh">&#8635;</button>
+        <button class="btn-secondary btn-sq" id="docsBtn" title="Documentation">?</button>
         <button class="btn-secondary btn-sq" id="settingsBtn" title="Settings">&#9881;</button>
       </div>
     </header>
@@ -37,7 +34,7 @@
       <aside class="task-rail" id="taskRail">
         <div class="tabs-bar" role="tablist" aria-label="Task filters">
           <button class="tab active" id="tabOpen" data-filter="open">Open</button>
-          <button class="tab" id="tabAnswered" data-filter="answered">Answered</button>
+          <button class="tab" id="tabFulfilled" data-filter="fulfilled">Fulfilled</button>
           <button class="tab" id="tabPaid" data-filter="paid">Paid</button>
           <button class="tab" id="tabReview" data-filter="review">Review</button>
           <button class="tab" id="tabAll" data-filter="all">All</button>
@@ -105,6 +102,21 @@
             <button class="btn-submit" id="saveSettings">Save</button>
             <button class="btn-secondary" id="clearSettings">Clear</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Documentation Modal -->
+    <div id="docsModal" class="modal" aria-hidden="true">
+      <div class="modal-backdrop" id="docsBackdrop"></div>
+      <div class="modal-body docs-modal-body" role="dialog" aria-modal="true" aria-label="Documentation">
+        <div class="modal-top">
+          <div class="modal-title">Documentation</div>
+          <button class="btn-secondary" id="docsClose">Close</button>
+        </div>
+        <div class="docs-layout">
+          <nav class="docs-nav" id="docsNav"></nav>
+          <div class="docs-content" id="docsContent"></div>
         </div>
       </div>
     </div>

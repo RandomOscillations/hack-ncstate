@@ -14,6 +14,7 @@ import { EscrowService, ChainLogger } from "./solana";
 import { makeRoutes } from "./http/routes";
 import { PubSubBroker } from "./pubsub";
 import { AgentRegistry, TrustStore } from "./agents";
+import { seedDemoData } from "./tasks/seed";
 
 // Load apps/server/.env automatically when running via npm workspaces.
 loadDotEnvFromCwd(".env");
@@ -57,6 +58,9 @@ broker.subscribe({
 
 // API routes
 app.use("/api", makeRoutes(env, tasks, ws, escrow, broker, agentRegistry, trustStore, chainLogger, fulfillmentStore, calibrationStore, ledgerStore));
+
+// Seed demo tasks so the UI is pre-populated on load
+seedDemoData(store, agentRegistry, trustStore, ledgerStore);
 
 // Static UI + assets
 app.use(express.static(env.webPublicDir));

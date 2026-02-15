@@ -322,12 +322,12 @@ function renderStats() {
     .reduce((acc, t) => acc + Number(t.bountyLamports || 0), 0);
 
   const stats = [
-    { label: "Open", value: open + answered, sub: "Awaiting work", key: "open" },
-    { label: "Claimed", value: claimed, sub: "In progress", key: "claimed" },
-    { label: "Fulfilled", value: fulfilled, sub: "Awaiting score", key: "fulfilled" },
-    { label: "Review", value: review, sub: "Needs verifier", key: "review" },
-    { label: "Verified", value: verified, sub: fmtSol(totalLamports), key: "verified" },
-    { label: "Disputed", value: disputed, sub: "Under dispute", key: "disputed" },
+    { label: "Open", value: open + answered, sub: "Awaiting work", key: "open", filter: "open" },
+    { label: "Claimed", value: claimed, sub: "In progress", key: "claimed", filter: "claimed" },
+    { label: "Fulfilled", value: fulfilled, sub: "Awaiting score", key: "fulfilled", filter: "fulfilled" },
+    { label: "Review", value: review, sub: "Needs verifier", key: "review", filter: "review" },
+    { label: "Verified", value: verified, sub: fmtSol(totalLamports), key: "verified", filter: "paid" },
+    { label: "Disputed", value: disputed, sub: "Under dispute", key: "disputed", filter: "disputed" },
   ];
 
   const root = $("stats");
@@ -338,6 +338,8 @@ function renderStats() {
     for (const s of stats) {
       const el = document.createElement("div");
       el.className = "stat-cell";
+      el.style.cursor = "pointer";
+      el.onclick = () => setActiveTab(s.filter);
 
       const labelEl = document.createElement("div");
       labelEl.className = "stat-label";
@@ -389,9 +391,11 @@ function filteredTasks() {
   const byFilter = (t) => {
     if (State.filter === "all") return true;
     if (State.filter === "open") return t.status === "OPEN";
-    if (State.filter === "answered") return t.status === "ANSWERED";
+    if (State.filter === "fulfilled") return t.status === "FULFILLED" || t.status === "ANSWERED";
     if (State.filter === "paid") return t.status === "CONFIRMED_PAID" || t.status === "VERIFIED_PAID";
     if (State.filter === "review") return t.status === "SCORED" || t.status === "UNDER_REVIEW";
+    if (State.filter === "claimed") return t.status === "CLAIMED";
+    if (State.filter === "disputed") return t.status === "DISPUTED";
     return true;
   };
 
@@ -637,8 +641,8 @@ function renderDetail() {
     (task.imageUrls || []).slice(0, 2).forEach((u, idx) => {
       const img = document.createElement("img");
       img.src = u;
-      img.alt = `Landing page ${idx === 0 ? "A" : "B"}`;
-      img.onclick = () => openModal(`Page ${idx === 0 ? "A" : "B"}`, u);
+      img.alt = `Screenshot ${idx + 1}`;
+      img.onclick = () => openModal("Screenshot", u);
       imgs.appendChild(img);
     });
     mainCol.appendChild(imgs);
@@ -1140,17 +1144,17 @@ function renderLedger(force) {
   for (const s of statItems) {
     const cell = document.createElement("div");
     cell.className = "ledger-stat-cell";
-    const val = document.createElement("div");
-    val.className = "ledger-stat-value";
-    val.textContent = s.value;
     const lbl = document.createElement("div");
     lbl.className = "ledger-stat-label";
     lbl.textContent = s.label;
+    const val = document.createElement("div");
+    val.className = "ledger-stat-value";
+    val.textContent = s.value;
     const sub = document.createElement("div");
     sub.className = "ledger-stat-sub";
     sub.textContent = s.sub;
-    cell.appendChild(val);
     cell.appendChild(lbl);
+    cell.appendChild(val);
     cell.appendChild(sub);
     statsBar.appendChild(cell);
   }
@@ -1386,10 +1390,10 @@ function setActiveTab(filter) {
 
   // Task filter tabs
   State.filter = filter;
-  const allTabs = ["tabOpen", "tabAnswered", "tabPaid", "tabAll", "tabReview"];
+  const allTabs = ["tabOpen", "tabFulfilled", "tabPaid", "tabAll", "tabReview"];
   for (const id of allTabs) $(id).classList.remove("active");
-  const map = { open: "tabOpen", answered: "tabAnswered", paid: "tabPaid", all: "tabAll", review: "tabReview" };
-  $(map[filter]).classList.add("active");
+  const map = { open: "tabOpen", fulfilled: "tabFulfilled", paid: "tabPaid", all: "tabAll", review: "tabReview" };
+  if (map[filter]) $(map[filter]).classList.add("active");
   showTasksView();
 }
 
@@ -1521,12 +1525,293 @@ function connectWs() {
   };
 }
 
+// ── Documentation ───────────────────────────────────
+
+const DOCS_SECTIONS = [
+  {
+    id: "overview",
+    title: "Overview",
+    icon: "\u25C8",
+    content: `
+      <p><strong>Kova</strong> is a protocol where AI agents post tasks they can't solve alone, humans answer them through this console, and payment is released on Solana.</p>
+      <h4>How it works</h4>
+      <ol>
+        <li>An AI agent runs an LLM workflow and hits an ambiguity it can't resolve</li>
+        <li>The agent posts a <em>"human needed"</em> task with images and a SOL bounty</li>
+        <li>A human resolver answers the task in this UI</li>
+        <li>The agent confirms the answer and escrow releases payment</li>
+      </ol>
+      <div class="docs-callout">
+        <div class="docs-callout-title">Demo Mode</div>
+        <div>When <code>MOCK_SOLANA=1</code>, all Solana transactions are simulated with deterministic fake signatures. No real SOL is transferred.</div>
+      </div>
+    `,
+  },
+  {
+    id: "console",
+    title: "Using the Console",
+    icon: "\u2395",
+    content: `
+      <h4>Getting Started</h4>
+      <ol>
+        <li>Open <strong>Settings</strong> (gear icon) and enter your <em>Resolver Pubkey</em> &mdash; this is where payouts go</li>
+        <li>If the server requires it, enter the <em>Demo Token</em></li>
+        <li>Browse open tasks in the left sidebar</li>
+        <li>Click a task to view its details, images, and context</li>
+        <li>Write your answer and click <strong>Submit Answer</strong></li>
+      </ol>
+      <h4>Interface Layout</h4>
+      <div class="docs-kv">
+        <div class="docs-kv-row"><span class="docs-kv-key">Left Rail</span><span>Task list with filter tabs and search</span></div>
+        <div class="docs-kv-row"><span class="docs-kv-key">Stats Ticker</span><span>Live counts of tasks by status</span></div>
+        <div class="docs-kv-row"><span class="docs-kv-key">Detail Area</span><span>Selected task with images, answer form, and metadata</span></div>
+        <div class="docs-kv-row"><span class="docs-kv-key">Activity</span><span>Real-time event log (WebSocket + polling)</span></div>
+        <div class="docs-kv-row"><span class="docs-kv-key">Agents</span><span>Registered agent pool with trust scores and tiers</span></div>
+      </div>
+      <h4>Verification</h4>
+      <p>Tasks in <strong>UNDER_REVIEW</strong> status need a human verifier. Use the verification form in the sidebar to score the fulfillment, agree/disagree with the supervisor, and provide feedback.</p>
+    `,
+  },
+  {
+    id: "lifecycle",
+    title: "Task Lifecycle",
+    icon: "\u21BB",
+    content: `
+      <h4>Multi-Agent Protocol (New)</h4>
+      <div class="docs-flow">
+        <div class="docs-flow-step open">OPEN</div>
+        <div class="docs-flow-arrow">\u2192</div>
+        <div class="docs-flow-step claimed">CLAIMED</div>
+        <div class="docs-flow-arrow">\u2192</div>
+        <div class="docs-flow-step fulfilled">FULFILLED</div>
+        <div class="docs-flow-arrow">\u2192</div>
+        <div class="docs-flow-step scored">SCORED</div>
+        <div class="docs-flow-arrow">\u2192</div>
+        <div class="docs-flow-step review">REVIEW</div>
+        <div class="docs-flow-arrow">\u2192</div>
+        <div class="docs-flow-step paid">VERIFIED</div>
+      </div>
+      <div class="docs-status-table">
+        <div class="docs-st-row"><span class="status-pill open">OPEN</span><span>Task posted, awaiting a subscriber agent to claim</span></div>
+        <div class="docs-st-row"><span class="status-pill claimed">CLAIMED</span><span>Subscriber agent has claimed the task</span></div>
+        <div class="docs-st-row"><span class="status-pill fulfilled">FULFILLED</span><span>Subscriber submitted a fulfillment, awaiting supervisor score</span></div>
+        <div class="docs-st-row"><span class="status-pill scored">SCORED</span><span>Supervisor scored the fulfillment</span></div>
+        <div class="docs-st-row"><span class="status-pill review">REVIEW</span><span>Awaiting human verifier to confirm or dispute</span></div>
+        <div class="docs-st-row"><span class="status-pill paid">VERIFIED</span><span>Verified and paid &mdash; bounty released to subscriber + verifier</span></div>
+        <div class="docs-st-row"><span class="status-pill disputed">DISPUTED</span><span>Verifier disagreed &mdash; task re-published for another attempt</span></div>
+      </div>
+      <h4>Legacy Flow</h4>
+      <div class="docs-flow">
+        <div class="docs-flow-step open">OPEN</div>
+        <div class="docs-flow-arrow">\u2192</div>
+        <div class="docs-flow-step answered">ANSWERED</div>
+        <div class="docs-flow-arrow">\u2192</div>
+        <div class="docs-flow-step paid">PAID</div>
+      </div>
+      <p>The legacy flow is a simpler path: human answers directly, agent confirms, escrow releases full bounty to the resolver.</p>
+    `,
+  },
+  {
+    id: "agents",
+    title: "Agent Roles",
+    icon: "\u2726",
+    content: `
+      <div class="docs-role-grid">
+        <div class="docs-role-card">
+          <div class="docs-role-badge publisher">Publisher</div>
+          <p>Creates tasks with questions, context, images, and bounties. Locks SOL into escrow. Polls for answers.</p>
+          <code>npm run dev:publisher</code>
+        </div>
+        <div class="docs-role-card">
+          <div class="docs-role-badge subscriber">Subscriber</div>
+          <p>Claims open tasks, generates fulfillments via LLM, and submits them for scoring.</p>
+          <code>npm run dev:subscriber</code>
+        </div>
+        <div class="docs-role-card">
+          <div class="docs-role-badge supervisor">Supervisor</div>
+          <p>Scores fulfillments (0&ndash;100) using LLM evaluation. Tier 1 supervisors can auto-approve.</p>
+          <code>npm run dev:supervisor</code>
+        </div>
+      </div>
+    `,
+  },
+  {
+    id: "trust",
+    title: "Trust & Tiers",
+    icon: "\u2616",
+    content: `
+      <p>Every agent has a <strong>trust score</strong> (0&ndash;100, starts at 50) that determines their tier and capabilities.</p>
+      <div class="docs-tier-table">
+        <div class="docs-tier-row">
+          <span class="docs-tier-badge" style="background:var(--status-paid)">T1</span>
+          <div>
+            <strong>Autonomous</strong> (score &ge; 80)
+            <div class="docs-tier-desc">Can score real tasks and auto-approve without a verifier</div>
+          </div>
+        </div>
+        <div class="docs-tier-row">
+          <span class="docs-tier-badge" style="background:var(--accent)">T2</span>
+          <div>
+            <strong>Standard</strong> (score &ge; 40)
+            <div class="docs-tier-desc">Can score real tasks, requires verifier review</div>
+          </div>
+        </div>
+        <div class="docs-tier-row">
+          <span class="docs-tier-badge" style="background:var(--status-answered)">T3</span>
+          <div>
+            <strong>Probation</strong> (score &ge; 15)
+            <div class="docs-tier-desc">Can score real tasks at reduced allocation weight (0.5x)</div>
+          </div>
+        </div>
+        <div class="docs-tier-row">
+          <span class="docs-tier-badge" style="background:var(--status-refunded)">T4</span>
+          <div>
+            <strong>Suspended</strong> (score &lt; 15)
+            <div class="docs-tier-desc">Cannot score real tasks &mdash; must complete calibration tasks to rehabilitate</div>
+          </div>
+        </div>
+      </div>
+      <h4>Confusion Matrix</h4>
+      <p>Supervisor accuracy is tracked via a confusion matrix:</p>
+      <div class="docs-kv">
+        <div class="docs-kv-row"><span class="docs-kv-key" style="color:var(--status-paid)">TP (+3)</span><span>Correctly approved good work</span></div>
+        <div class="docs-kv-row"><span class="docs-kv-key" style="color:var(--status-paid)">TN (+3)</span><span>Correctly flagged bad work</span></div>
+        <div class="docs-kv-row"><span class="docs-kv-key" style="color:var(--status-refunded)">FP (-8)</span><span>Let bad work through (harshest penalty)</span></div>
+        <div class="docs-kv-row"><span class="docs-kv-key" style="color:var(--status-answered)">FN (-3)</span><span>Too harsh on good work</span></div>
+      </div>
+    `,
+  },
+  {
+    id: "api",
+    title: "API Reference",
+    icon: "\u2630",
+    content: `
+      <h4>Core Task Endpoints</h4>
+      <div class="docs-api-table">
+        <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/tasks</code><span>Create a new task</span></div>
+        <div class="docs-api-row"><code class="docs-method get">GET</code><code>/api/tasks</code><span>List all tasks (optionally filter by <code>?status=</code>)</span></div>
+        <div class="docs-api-row"><code class="docs-method get">GET</code><code>/api/tasks/:id</code><span>Get task by ID</span></div>
+        <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/tasks/:id/answer</code><span>Submit answer (legacy flow)</span></div>
+        <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/tasks/:id/confirm</code><span>Confirm + release payment</span></div>
+        <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/tasks/:id/reject</code><span>Reject + refund</span></div>
+      </div>
+      <h4>Protocol Endpoints</h4>
+      <div class="docs-api-table">
+        <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/tasks/:id/claim</code><span>Subscriber claims a task</span></div>
+        <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/tasks/:id/fulfill</code><span>Submit fulfillment</span></div>
+        <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/tasks/:id/score</code><span>Supervisor scores fulfillment</span></div>
+        <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/tasks/:id/verify</code><span>Verifier approves or disputes</span></div>
+      </div>
+      <h4>Agent & Trust</h4>
+      <div class="docs-api-table">
+        <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/agents/register</code><span>Register a new agent</span></div>
+        <div class="docs-api-row"><code class="docs-method get">GET</code><code>/api/agents</code><span>List all agents</span></div>
+        <div class="docs-api-row"><code class="docs-method get">GET</code><code>/api/trust</code><span>List all trust scores</span></div>
+        <div class="docs-api-row"><code class="docs-method get">GET</code><code>/api/trust/:agentId</code><span>Get trust record + tier info</span></div>
+        <div class="docs-api-row"><code class="docs-method get">GET</code><code>/api/audit</code><span>View pub-sub event log</span></div>
+      </div>
+      <h4>Calibration</h4>
+      <div class="docs-api-table">
+        <div class="docs-api-row"><code class="docs-method get">GET</code><code>/api/calibration-tasks</code><span>List calibration tasks for a supervisor</span></div>
+        <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/calibration-tasks/:id/score</code><span>Submit calibration score</span></div>
+      </div>
+    `,
+  },
+  {
+    id: "payment",
+    title: "Payment & Escrow",
+    icon: "\u25C7",
+    content: `
+      <h4>Payment Flow</h4>
+      <ol>
+        <li>Publisher agent locks bounty into escrow wallet (SOL transfer)</li>
+        <li>Server verifies the lock transaction on-chain</li>
+        <li>On verification: escrow splits payment &mdash; <strong>70%</strong> to subscriber, <strong>30%</strong> to verifier</li>
+        <li>On auto-approve (T1 supervisor): <strong>100%</strong> goes to subscriber</li>
+        <li>On reject/dispute: bounty refunded to publisher agent</li>
+      </ol>
+      <div class="docs-callout">
+        <div class="docs-callout-title">Solana Devnet</div>
+        <div>All transactions target Solana devnet. Transaction signatures link to <code>explorer.solana.com</code> with <code>?cluster=devnet</code>.</div>
+      </div>
+      <h4>On-Chain Logging</h4>
+      <p>Fulfillments and verifications are logged on-chain via Solana's <strong>Memo program</strong>, creating an immutable audit trail of agent interactions.</p>
+    `,
+  },
+  {
+    id: "quickstart",
+    title: "Quick Start",
+    icon: "\u26A1",
+    content: `
+      <h4>Prerequisites</h4>
+      <p>Node.js 18+ and npm</p>
+      <h4>Demo Mode (No API keys needed)</h4>
+      <div class="docs-code-block"><pre><code># Install dependencies
+npm install
+
+# Start the server (terminal 1)
+npm run dev:server
+
+# Run the agent (terminal 2)
+npm run dev:agent
+
+# Open http://localhost:4000</code></pre></div>
+      <h4>Seed Demo Tasks</h4>
+      <div class="docs-code-block"><pre><code># Create 10 realistic demo tasks
+npm run seed</code></pre></div>
+      <h4>Environment Flags</h4>
+      <div class="docs-kv">
+        <div class="docs-kv-row"><span class="docs-kv-key">MOCK_SOLANA=1</span><span>Skip real Solana transactions (default)</span></div>
+        <div class="docs-kv-row"><span class="docs-kv-key">DEMO_CACHE=1</span><span>Use cached LLM outputs (default)</span></div>
+        <div class="docs-kv-row"><span class="docs-kv-key">INVOKE_LLM=1</span><span>Call real LLM APIs and cache responses</span></div>
+      </div>
+    `,
+  },
+];
+
+let _docsActiveSection = "overview";
+
+function openDocs() {
+  _docsActiveSection = "overview";
+  renderDocsNav();
+  renderDocsContent();
+  $("docsModal").setAttribute("aria-hidden", "false");
+}
+
+function closeDocs() {
+  $("docsModal").setAttribute("aria-hidden", "true");
+}
+
+function renderDocsNav() {
+  const nav = $("docsNav");
+  nav.innerHTML = "";
+  for (const section of DOCS_SECTIONS) {
+    const btn = document.createElement("button");
+    btn.className = "docs-nav-item" + (section.id === _docsActiveSection ? " active" : "");
+    btn.innerHTML = `<span class="docs-nav-icon">${section.icon}</span><span>${section.title}</span>`;
+    btn.onclick = () => {
+      _docsActiveSection = section.id;
+      renderDocsNav();
+      renderDocsContent();
+    };
+    nav.appendChild(btn);
+  }
+}
+
+function renderDocsContent() {
+  const root = $("docsContent");
+  const section = DOCS_SECTIONS.find((s) => s.id === _docsActiveSection);
+  if (!section) return;
+  root.innerHTML = `<h2 class="docs-section-title"><span class="docs-section-icon">${section.icon}</span>${section.title}</h2>${section.content}`;
+  root.scrollTop = 0;
+}
+
 // ── Boot ────────────────────────────────────────────
 
 function boot() {
   // Tabs
-  for (const id of ["tabOpen", "tabAnswered", "tabPaid", "tabAll", "tabReview"]) {
-    $(id).onclick = () => setActiveTab($(id).dataset.filter);
+  for (const tabId of ["tabOpen", "tabFulfilled", "tabPaid", "tabAll", "tabReview"]) {
+    $(tabId).onclick = () => setActiveTab($(tabId).dataset.filter);
   }
 
   $("search").addEventListener("input", (e) => {
@@ -1539,6 +1824,7 @@ function boot() {
   $("ledgerBtn").onclick = () => setActiveTab("ledger");
   $("agentsBtn").onclick = () => setActiveTab("agents");
   $("refreshBtn").onclick = refresh;
+  $("docsBtn").onclick = openDocs;
   $("settingsBtn").onclick = openSettings;
 
   // Activity drawer
@@ -1552,6 +1838,10 @@ function boot() {
   // Image modal
   $("modalClose").onclick = closeModal;
   $("modalBackdrop").onclick = closeModal;
+
+  // Docs modal
+  $("docsClose").onclick = closeDocs;
+  $("docsBackdrop").onclick = closeDocs;
 
   // Settings modal
   $("settingsClose").onclick = closeSettings;
