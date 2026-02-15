@@ -55,6 +55,9 @@ Steps:
 
 By default, `.env.example` sets `MOCK_SOLANA=1` so payouts/refunds are simulated (but the status transitions and demo UX are real).
 
+Notes:
+- `apps/server/.env` and `apps/agent/.env` are auto-loaded on startup (no need to `source`).
+
 ## Devnet Demo (Real Signatures, Real Transfers)
 
 When you're ready to show transactions in Solana Explorer:

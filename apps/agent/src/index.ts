@@ -1,8 +1,12 @@
 import type { CreateTaskRequest } from "@unblock/common";
+import { loadDotEnvFromCwd } from "./dotenv";
 import { loadEnv } from "./env";
 import { ServerApi } from "./api";
 import { runReasoningProbe, runStep1, runStep2, runAmbiguityCheck, runFinalStep } from "./llm";
 import { sendLockTransaction } from "./solana";
+
+// Load apps/agent/.env automatically when running via npm workspaces.
+loadDotEnvFromCwd(".env");
 
 function log(msg: string) {
   console.log(`[agent] ${msg}`);
