@@ -78,10 +78,30 @@ async function callAnthropic(apiKey: string, prompt: string): Promise<string> {
   return data.content[0].text;
 }
 
+async function callGemini(apiKey: string, prompt: string): Promise<string> {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+      }),
+    }
+  );
+  if (!res.ok) throw new Error(`Gemini API error: ${res.status} ${await res.text()}`);
+  const data = (await res.json()) as any;
+  return data.candidates[0].content.parts[0].text;
+}
+
 async function callLlm(env: AgentEnv, prompt: string): Promise<string> {
   if (env.llmProvider === "anthropic") {
     if (!env.anthropicApiKey) throw new Error("ANTHROPIC_API_KEY not set");
     return callAnthropic(env.anthropicApiKey, prompt);
+  }
+  if (env.llmProvider === "gemini") {
+    if (!env.geminiApiKey) throw new Error("GEMINI_API_KEY not set");
+    return callGemini(env.geminiApiKey, prompt);
   }
   if (!env.openaiApiKey) throw new Error("OPENAI_API_KEY not set");
   return callOpenAi(env.openaiApiKey, prompt);
