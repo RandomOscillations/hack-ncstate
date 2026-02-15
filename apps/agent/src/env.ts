@@ -1,7 +1,7 @@
 import path from "node:path";
-import dotenv from "dotenv";
+import { loadDotEnvFromCwd } from "./dotenv";
 
-dotenv.config();
+loadDotEnvFromCwd(".env");
 
 export type AgentEnv = {
   serverBaseUrl: string;
@@ -13,6 +13,11 @@ export type AgentEnv = {
   openaiApiKey?: string;
   anthropicApiKey?: string;
   geminiApiKey?: string;
+  openaiModel: string;
+  anthropicModel: string;
+  geminiModel: string;
+  showPrompts: boolean;
+  reasoningTest: boolean;
   agentKeypairPath: string;
   escrowPubkey?: string;
   solanaRpcUrl: string;
@@ -31,6 +36,11 @@ export function loadEnv(): AgentEnv {
     openaiApiKey: process.env.OPENAI_API_KEY || undefined,
     anthropicApiKey: process.env.ANTHROPIC_API_KEY || undefined,
     geminiApiKey: process.env.GEMINI_API_KEY || undefined,
+    openaiModel: process.env.OPENAI_MODEL || "gpt-4o",
+    anthropicModel: process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-latest",
+    geminiModel: process.env.GEMINI_MODEL || "gemini-2.0-flash",
+    showPrompts: (process.env.SHOW_PROMPTS || "0") === "1",
+    reasoningTest: (process.env.REASONING_TEST || "0") === "1",
     agentKeypairPath:
       process.env.AGENT_KEYPAIR_PATH || path.resolve(process.cwd(), "../../.secrets/agent.json"),
     escrowPubkey: process.env.ESCROW_PUBKEY || undefined,

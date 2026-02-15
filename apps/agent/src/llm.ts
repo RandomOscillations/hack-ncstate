@@ -6,6 +6,22 @@ export type LlmResult = { text: string };
 // Cached outputs for DEMO_CACHE mode (no API key required)
 // ---------------------------------------------------------------------------
 
+const CACHED_REASONING_PROBE = `Reasoning Probe (Fintech Risk Check):
+{
+  "candidates": [
+    { "name": "A", "monthlyIncome": 8000, "monthlyDebt": 1800, "dti": 0.225, "notes": ["low DTI", "healthy buffer"] },
+    { "name": "B", "monthlyIncome": 5400, "monthlyDebt": 2600, "dti": 0.481, "notes": ["high DTI", "tight cashflow"] },
+    { "name": "C", "monthlyIncome": 9500, "monthlyDebt": 4100, "dti": 0.432, "notes": ["moderate-high DTI", "higher income helps"] }
+  ],
+  "decision": "A",
+  "rationale": [
+    "A has the lowest debt-to-income ratio and best affordability margin.",
+    "B is above typical underwriting DTI thresholds and is riskiest.",
+    "C is viable but still materially higher DTI than A."
+  ],
+  "confidence": 0.78
+}`;
+
 const CACHED_STEP1 = `Landing Page A Analysis:
   - Clean minimalist layout with strong visual hierarchy
   - Clear CTA button above the fold
@@ -41,25 +57,7 @@ Result: Avoided potential hallucination on subjective visual comparison.`;
 // Live LLM calls (raw fetch — no SDK dependencies)
 // ---------------------------------------------------------------------------
 
-async function callOpenAi(apiKey: string, prompt: string): Promise<string> {
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "gpt-4o",
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 512,
-    }),
-  });
-  if (!res.ok) throw new Error(`OpenAI API error: ${res.status} ${await res.text()}`);
-  const data = (await res.json()) as any;
-  return data.choices[0].message.content;
-}
-
-async function callAnthropic(apiKey: string, prompt: string): Promise<string> {
+async function callAnthropic(apiKey: string, model: string, prompt: string): Promise<string> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -68,7 +66,7 @@ async function callAnthropic(apiKey: string, prompt: string): Promise<string> {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-5-20250929",
+      model,
       messages: [{ role: "user", content: prompt }],
       max_tokens: 512,
     }),
@@ -78,9 +76,9 @@ async function callAnthropic(apiKey: string, prompt: string): Promise<string> {
   return data.content[0].text;
 }
 
-async function callGemini(apiKey: string, prompt: string): Promise<string> {
+async function callGemini(apiKey: string, model: string, prompt: string): Promise<string> {
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -95,21 +93,60 @@ async function callGemini(apiKey: string, prompt: string): Promise<string> {
 }
 
 async function callLlm(env: AgentEnv, prompt: string): Promise<string> {
+  if (env.showPrompts) {
+    console.log("\n[agent][prompt]\n" + prompt + "\n");
+  }
   if (env.llmProvider === "anthropic") {
     if (!env.anthropicApiKey) throw new Error("ANTHROPIC_API_KEY not set");
-    return callAnthropic(env.anthropicApiKey, prompt);
+    return callAnthropic(env.anthropicApiKey, env.anthropicModel, prompt);
   }
   if (env.llmProvider === "gemini") {
     if (!env.geminiApiKey) throw new Error("GEMINI_API_KEY not set");
-    return callGemini(env.geminiApiKey, prompt);
+    return callGemini(env.geminiApiKey, env.geminiModel, prompt);
   }
   if (!env.openaiApiKey) throw new Error("OPENAI_API_KEY not set");
-  return callOpenAi(env.openaiApiKey, prompt);
+  // OpenAI uses chat/completions here; model is configurable.
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.openaiApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: env.openaiModel,
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 512,
+      temperature: 0.2,
+    }),
+  });
+  if (!res.ok) throw new Error(`OpenAI API error: ${res.status} ${await res.text()}`);
+  const data = (await res.json()) as any;
+  return data.choices[0].message.content;
 }
 
 // ---------------------------------------------------------------------------
 // Public step functions (cache-aware)
 // ---------------------------------------------------------------------------
+
+export async function runReasoningProbe(env: AgentEnv): Promise<LlmResult> {
+  if (env.demoCache) return { text: CACHED_REASONING_PROBE };
+  const prompt =
+    "You are a fintech risk analyst. Solve this underwriting reasoning check.\n\n" +
+    "Three candidates want the same $10k personal loan. Compute monthly income, DTI, and pick the safest.\n" +
+    "- Candidate A: income $96,000/yr, monthly debt payments $1,800\n" +
+    "- Candidate B: income $64,800/yr, monthly debt payments $2,600\n" +
+    "- Candidate C: income $114,000/yr, monthly debt payments $4,100\n\n" +
+    "Return ONLY JSON with this shape:\n" +
+    "{\n" +
+    '  "candidates":[{"name":"A","monthlyIncome":number,"monthlyDebt":number,"dti":number,"notes":[string]}],\n' +
+    '  "decision":"A|B|C",\n' +
+    '  "rationale":[string],\n' +
+    '  "confidence":number\n' +
+    "}\n" +
+    "Use dti = monthlyDebt/monthlyIncome rounded to 3 decimals. Confidence 0..1.\n";
+  const text = await callLlm(env, prompt);
+  return { text };
+}
 
 export async function runStep1(env: AgentEnv): Promise<LlmResult> {
   if (env.demoCache) return { text: CACHED_STEP1 };

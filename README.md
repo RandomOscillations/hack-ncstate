@@ -55,6 +55,9 @@ Steps:
 
 By default, `.env.example` sets `MOCK_SOLANA=1` so payouts/refunds are simulated (but the status transitions and demo UX are real).
 
+Notes:
+- `apps/server/.env` and `apps/agent/.env` are auto-loaded on startup (no need to `source`).
+
 ## Devnet Demo (Real Signatures, Real Transfers)
 
 When you're ready to show transactions in Solana Explorer:
@@ -74,6 +77,28 @@ When you're ready to show transactions in Solana Explorer:
    - `npm run dev:agent`
 
 If devnet is down or airdrops are rate-limited during judging, flip back to `MOCK_SOLANA=1` and run the exact same demo flow.
+
+## Real LLM Reasoning Test Case (Verification)
+
+To prove you are running a real LLM (not cached text), run the agent with:
+
+- `DEMO_CACHE=0`
+- `REASONING_TEST=1`
+- set an API key for your chosen provider
+
+Example (OpenAI):
+
+```sh
+DEMO_CACHE=0 REASONING_TEST=1 LLM_PROVIDER=openai OPENAI_API_KEY=... npm run dev:agent
+```
+
+Example (Anthropic):
+
+```sh
+DEMO_CACHE=0 REASONING_TEST=1 LLM_PROVIDER=anthropic ANTHROPIC_API_KEY=... npm run dev:agent
+```
+
+The agent will print a small fintech underwriting reasoning probe (DTI calculation + decision) before continuing the normal workflow.
 
 ## Demo Script (3-5 minutes)
 
@@ -112,3 +137,9 @@ Base URL: `http://localhost:4000`
 - UI not updating: refresh page; polling should still work even if WS fails
 - Solana devnet issues: set `MOCK_SOLANA=1`
 - LLM is slow/rate-limited: you can temporarily hardcode cached outputs in the agent (do not block the demo on LLM quality)
+
+## Tests
+
+There is no full unit/integration suite yet. For hackathon sanity checks:
+
+- `npm test` runs TypeScript typecheck + builds all workspaces.

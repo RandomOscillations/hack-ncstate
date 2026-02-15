@@ -2,12 +2,16 @@ import http from "node:http";
 import express from "express";
 import cors from "cors";
 
+import { loadDotEnvFromCwd } from "./dotenv";
 import { loadEnv } from "./env";
 import { TaskStore } from "./tasks/store";
 import { TaskService } from "./tasks/service";
 import { WsHub } from "./ws/hub";
 import { EscrowService } from "./solana";
 import { makeRoutes } from "./http/routes";
+
+// Load apps/server/.env automatically when running via npm workspaces.
+loadDotEnvFromCwd(".env");
 
 const env = loadEnv();
 
@@ -39,4 +43,3 @@ server.listen(env.port, () => {
   console.log(`[server] web dir: ${env.webPublicDir}`);
   console.log(`[server] mock solana: ${env.mockSolana ? "ON" : "OFF"}`);
 });
-

@@ -10,8 +10,7 @@
   },
   "dependencies": {
     "@solana/web3.js": "^1.98.0",
-    "@unblock/common": "0.0.0",
-    "dotenv": "^17.3.1"
+    "@unblock/common": "0.0.0"
   },
   "devDependencies": {
     "typescript": "^5.6.3"
