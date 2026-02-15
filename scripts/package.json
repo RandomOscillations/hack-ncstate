@@ -5,9 +5,11 @@
   "scripts": {
     "gen-keypairs": "tsx src/gen-keypairs.ts",
     "prefund-agent": "tsx src/prefund-agent.ts",
-    "print-pubkey": "tsx src/print-pubkey.ts"
+    "print-pubkey": "tsx src/print-pubkey.ts",
+    "spl-airdrop": "tsx src/spl-airdrop.ts"
   },
   "dependencies": {
+    "@solana/spl-token": "^0.4.9",
     "@solana/web3.js": "^1.98.0"
   },
   "devDependencies": {
@@ -15,4 +17,3 @@
     "typescript": "^5.6.3"
   }
 }
-

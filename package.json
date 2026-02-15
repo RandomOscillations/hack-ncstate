@@ -16,7 +16,8 @@
     "typecheck": "npm -w packages/common run typecheck && npm -w apps/server run typecheck && npm -w apps/agent run typecheck",
     "scripts:gen-keypairs": "npm -w scripts run gen-keypairs",
     "scripts:prefund-agent": "npm -w scripts run prefund-agent",
-    "scripts:print-pubkey": "npm -w scripts run print-pubkey"
+    "scripts:print-pubkey": "npm -w scripts run print-pubkey",
+    "scripts:spl-airdrop": "npm -w scripts run spl-airdrop"
   },
   "devDependencies": {
     "concurrently": "^9.0.0",

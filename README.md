@@ -78,6 +78,27 @@ When you're ready to show transactions in Solana Explorer:
 
 If devnet is down or airdrops are rate-limited during judging, flip back to `MOCK_SOLANA=1` and run the exact same demo flow.
 
+## Devnet "Airdrop" For Arbitrary Tokens (SPL Minting)
+
+Solana devnet faucet only airdrops SOL. For an "arbitrary token" on devnet, you mint your own SPL token.
+
+1. Ensure you have SOL for fees (devnet):
+   - `npm run scripts:gen-keypairs`
+   - `npm run scripts:prefund-agent`
+2. Mint a test SPL token and mint some balance to your wallet (defaults to `.secrets/agent.json` as mint authority):
+   - `npm run scripts:spl-airdrop`
+
+Options:
+- `AMOUNT=1000` (human units)
+- `DECIMALS=6`
+- `RECIPIENT_PUBKEY=<base58>` (defaults to mint authority pubkey)
+
+Example:
+
+```sh
+AMOUNT=2500 DECIMALS=6 npm run scripts:spl-airdrop
+```
+
 ## Real LLM Reasoning Test Case (Verification)
 
 To prove you are running a real LLM (not cached text), run the agent with:
