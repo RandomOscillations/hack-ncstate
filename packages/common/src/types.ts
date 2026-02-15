@@ -251,3 +251,26 @@ export type SubmitCalibrationScoreRequest = {
   score: number;
   reasoning: string;
 };
+
+// ── Ledger ──
+
+export type LedgerEntryType =
+  | "LOCK"
+  | "RELEASE"
+  | "REFUND"
+  | "SUBSCRIBER_PAY"
+  | "VERIFIER_PAY"
+  | "CHAIN_LOG";
+
+export type LedgerEntry = {
+  id: string;
+  timestampMs: number;
+  type: LedgerEntryType;
+  taskId: string;
+  txSig: string;
+  amountLamports: number;
+  fromPubkey?: string;
+  toPubkey?: string;
+  status: TaskStatus;
+  description: string;
+};

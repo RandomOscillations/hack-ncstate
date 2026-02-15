@@ -11,6 +11,8 @@ import type {
   SubmitCalibrationScoreRequest,
   TaskStatus,
   ConfusionOutcome,
+  LedgerEntry,
+  LedgerEntryType,
 } from "@unblock/common";
 import {
   CreateTaskRequestSchema,
@@ -31,6 +33,7 @@ import type { AgentRegistry, TrustStore } from "../agents";
 import type { ChainLogger } from "../solana/chain-logger";
 import type { FulfillmentStore } from "../tasks/fulfillment-store";
 import type { CalibrationStore } from "../tasks/calibration-store";
+import type { LedgerStore } from "../tasks/ledger-store";
 
 export function makeRoutes(
   env: ServerEnv,
@@ -42,9 +45,37 @@ export function makeRoutes(
   trust: TrustStore,
   chainLogger: ChainLogger,
   fulfillments: FulfillmentStore,
-  calibrations: CalibrationStore
+  calibrations: CalibrationStore,
+  ledger: LedgerStore
 ) {
   const router = express.Router();
+
+  function recordLedger(
+    type: LedgerEntryType,
+    taskId: string,
+    txSig: string,
+    amountLamports: number,
+    status: TaskStatus,
+    description: string,
+    fromPubkey?: string,
+    toPubkey?: string
+  ) {
+    const entry: LedgerEntry = {
+      id: crypto.randomUUID(),
+      timestampMs: Date.now(),
+      type,
+      taskId,
+      txSig,
+      amountLamports,
+      fromPubkey,
+      toPubkey,
+      status,
+      description,
+    };
+    ledger.add(entry);
+    ws.broadcast({ type: "ledger.new", entry });
+    broker.publish("ledger/new", { entryId: entry.id, type: entry.type, taskId });
+  }
 
   router.get("/health", (_req, res) => res.json({ ok: true }));
 
@@ -68,6 +99,12 @@ export function makeRoutes(
     const task = tasks.create(parsed.data);
     ws.broadcast({ type: "task.created", taskId: task.id });
     broker.publish(`tasks/${task.id}/created`, { taskId: task.id, status: task.status });
+
+    if (task.lockTxSig) {
+      recordLedger("LOCK", task.id, task.lockTxSig, task.bountyLamports, task.status,
+        "Bounty locked in escrow", task.agentPubkey, escrow.publicKey);
+    }
+
     return res.json({ taskId: task.id, status: task.status });
   });
 
@@ -108,6 +145,10 @@ export function makeRoutes(
       const releaseTxSig = await escrow.release(task);
       const updated = tasks.markConfirmedPaid(req.params.id, releaseTxSig);
       ws.broadcast({ type: "task.updated", taskId: updated.id, status: updated.status });
+
+      recordLedger("RELEASE", updated.id, releaseTxSig, updated.bountyLamports, updated.status,
+        "Bounty released to resolver", escrow.publicKey, updated.resolverPubkey);
+
       return res.json({ status: updated.status, releaseTxSig });
     } catch (e: any) {
       return res.status(400).json({ error: e?.message || "error" });
@@ -122,6 +163,10 @@ export function makeRoutes(
       const refundTxSig = await escrow.refund(task);
       const updated = tasks.markRejectedRefunded(req.params.id, refundTxSig);
       ws.broadcast({ type: "task.updated", taskId: updated.id, status: updated.status });
+
+      recordLedger("REFUND", updated.id, refundTxSig, updated.bountyLamports, updated.status,
+        "Bounty refunded to publisher", escrow.publicKey, updated.agentPubkey);
+
       return res.json({ status: updated.status, refundTxSig });
     } catch (e: any) {
       return res.status(400).json({ error: e?.message || "error" });
@@ -200,12 +245,15 @@ export function makeRoutes(
         parsed.data.subscriberAgentId,
         fulfillment.id
       );
-      // Update task with chain log tx sig
-      const taskWithChainLog = { ...updated, chainLogTxSig: chainTxSig };
+      // Persist chain log tx sig to store (bug fix)
+      tasks.patch(req.params.id, { chainLogTxSig: chainTxSig });
+
+      recordLedger("CHAIN_LOG", req.params.id, chainTxSig, 0, updated.status,
+        "Fulfillment logged on-chain", parsed.data.subscriberAgentId);
 
       ws.broadcast({ type: "task.updated", taskId: updated.id, status: updated.status });
       broker.publish(`tasks/${req.params.id}/fulfilled`, { taskId: req.params.id, fulfillmentId: fulfillment.id });
-      return res.json({ task: taskWithChainLog });
+      return res.json({ task: { ...updated, chainLogTxSig: chainTxSig } });
     } catch (e: any) {
       return res.status(400).json({ error: e?.message || "error" });
     }
@@ -247,7 +295,12 @@ export function makeRoutes(
             const subscriberPubkey = subscriberAgent?.pubkey || autoApproved.subscriberAgentId!;
             const releaseTxSig = await escrow.releaseToSubscriber(autoApproved, subscriberPubkey);
 
+            // Persist payment sig to store (bug fix)
+            tasks.patch(req.params.id, { subscriberPaymentTxSig: releaseTxSig });
             const paidTask = { ...autoApproved, subscriberPaymentTxSig: releaseTxSig };
+
+            recordLedger("SUBSCRIBER_PAY", req.params.id, releaseTxSig, autoApproved.bountyLamports, "VERIFIED_PAID",
+              "Auto-approved payment to subscriber", escrow.publicKey, subscriberPubkey);
 
             // Trust: reward both (assumed TP)
             trust.applyDelta(parsed.data.supervisorAgentId, 3, req.params.id, "auto-approve TP (T1 supervisor)");
@@ -315,18 +368,29 @@ export function makeRoutes(
           env.subscriberPaymentShare
         );
 
-        // Update task with payment sigs
+        // Persist payment sigs to store (bug fix)
+        tasks.patch(taskId, { subscriberPaymentTxSig: subscriberTxSig, verifierPaymentTxSig: verifierTxSig });
         const paidTask = {
           ...updated,
           subscriberPaymentTxSig: subscriberTxSig,
           verifierPaymentTxSig: verifierTxSig,
         };
 
+        const subscriberAmount = Math.floor(updated.bountyLamports * env.subscriberPaymentShare);
+        const verifierAmount = updated.bountyLamports - subscriberAmount;
+
+        recordLedger("SUBSCRIBER_PAY", taskId, subscriberTxSig, subscriberAmount, "VERIFIED_PAID",
+          "Payment to subscriber", escrow.publicKey, subscriberPubkey);
+        recordLedger("VERIFIER_PAY", taskId, verifierTxSig, verifierAmount, "VERIFIED_PAID",
+          "Payment to verifier", escrow.publicKey, parsed.data.verifierPubkey);
+
         // Trust: reward subscriber
         trust.applyDelta(updated.subscriberAgentId!, 5, taskId, "fulfillment verified and paid");
 
         // Log verification on chain
-        await chainLogger.logVerification(taskId, parsed.data.verifierPubkey, parsed.data.groundTruthScore);
+        const verifyChainSig = await chainLogger.logVerification(taskId, parsed.data.verifierPubkey, parsed.data.groundTruthScore);
+        recordLedger("CHAIN_LOG", taskId, verifyChainSig, 0, "VERIFIED_PAID",
+          "Verification logged on-chain", parsed.data.verifierPubkey);
 
         // Create calibration task from this verified task
         calibrations.createFromVerified(updated, env.supervisorScoreThreshold);
@@ -340,7 +404,9 @@ export function makeRoutes(
         trust.applyDelta(updated.subscriberAgentId!, -10, taskId, "fulfillment disputed by verifier");
 
         // Log verification on chain
-        await chainLogger.logVerification(taskId, parsed.data.verifierPubkey, parsed.data.groundTruthScore);
+        const disputeChainSig = await chainLogger.logVerification(taskId, parsed.data.verifierPubkey, parsed.data.groundTruthScore);
+        recordLedger("CHAIN_LOG", taskId, disputeChainSig, 0, "DISPUTED",
+          "Dispute verification logged on-chain", parsed.data.verifierPubkey);
 
         // Republish as new task
         const newTask = tasks.republishDisputed(taskId);
@@ -415,6 +481,12 @@ export function makeRoutes(
     if (!record) return res.status(404).json({ error: "not_found" });
     const tierInfo = trust.getTier(req.params.agentId);
     return res.json({ ...record, tierInfo });
+  });
+
+  router.get("/ledger", (req, res) => {
+    const taskId = req.query.taskId as string | undefined;
+    const entries = taskId ? ledger.getByTask(taskId) : ledger.list();
+    return res.json({ entries });
   });
 
   router.get("/audit", (_req, res) => {

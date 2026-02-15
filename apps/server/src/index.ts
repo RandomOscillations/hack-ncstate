@@ -8,6 +8,7 @@ import { TaskStore } from "./tasks/store";
 import { TaskService } from "./tasks/service";
 import { FulfillmentStore } from "./tasks/fulfillment-store";
 import { CalibrationStore } from "./tasks/calibration-store";
+import { LedgerStore } from "./tasks/ledger-store";
 import { WsHub } from "./ws/hub";
 import { EscrowService, ChainLogger } from "./solana";
 import { makeRoutes } from "./http/routes";
@@ -40,6 +41,7 @@ const agentRegistry = new AgentRegistry();
 const trustStore = new TrustStore();
 const fulfillmentStore = new FulfillmentStore();
 const calibrationStore = new CalibrationStore();
+const ledgerStore = new LedgerStore();
 const chainLogger = new ChainLogger({
   mockSolana: env.mockSolana,
   conn: null,
@@ -54,7 +56,7 @@ broker.subscribe({
 });
 
 // API routes
-app.use("/api", makeRoutes(env, tasks, ws, escrow, broker, agentRegistry, trustStore, chainLogger, fulfillmentStore, calibrationStore));
+app.use("/api", makeRoutes(env, tasks, ws, escrow, broker, agentRegistry, trustStore, chainLogger, fulfillmentStore, calibrationStore, ledgerStore));
 
 // Static UI + assets
 app.use(express.static(env.webPublicDir));

@@ -236,6 +236,13 @@ export class TaskService {
     return updated;
   }
 
+  patch(taskId: string, fields: Partial<Task>): Task {
+    const task = this.mustGet(taskId);
+    const updated: Task = { ...task, ...fields, updatedAtMs: this.deps.nowMs() };
+    this.store.upsert(updated);
+    return updated;
+  }
+
   get(taskId: string): Task | undefined {
     return this.store.get(taskId);
   }

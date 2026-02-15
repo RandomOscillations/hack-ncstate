@@ -40,6 +40,10 @@ const API = {
     });
     return res.json();
   },
+  async getLedger() {
+    const res = await fetch("/api/ledger");
+    return res.json();
+  },
 };
 
 const State = {
@@ -53,6 +57,7 @@ const State = {
   prevStats: { open: 0, answered: 0, paid: 0, refunded: 0, claimed: 0, fulfilled: 0, review: 0, verified: 0, disputed: 0 },
   agents: [],
   trustScores: [],
+  ledgerEntries: [],
   view: "tasks",
 };
 
@@ -60,6 +65,7 @@ const State = {
 const _statRefs = [];
 const _taskElements = new Map();
 let _detailFingerprint = "";
+let _ledgerFingerprint = "";
 let _initialLoad = true;
 
 // ── Simple Markdown Renderer ────────────────────────
@@ -1061,6 +1067,228 @@ function renderAgentPool() {
   root.appendChild(table);
 }
 
+// ── Render: Ledger ──────────────────────────────────
+
+function ledgerTypeIcon(type) {
+  const map = {
+    LOCK: "\u{1F512}", RELEASE: "\u{1F513}", REFUND: "\u21A9",
+    SUBSCRIBER_PAY: "\u{1F4B8}", VERIFIER_PAY: "\u{1F4B8}", CHAIN_LOG: "\u{1F4DD}",
+  };
+  return map[type] || "\u2022";
+}
+
+function ledgerTypeLabel(type) {
+  const map = {
+    LOCK: "Lock", RELEASE: "Release", REFUND: "Refund",
+    SUBSCRIBER_PAY: "Subscriber Pay", VERIFIER_PAY: "Verifier Pay", CHAIN_LOG: "Chain Log",
+  };
+  return map[type] || type;
+}
+
+function renderLedger(force) {
+  const root = $("ledgerView");
+  const entries = State.ledgerEntries;
+
+  // Skip rebuild if data hasn't changed
+  const fp = entries.map((e) => e.id).join(",");
+  if (!force && fp === _ledgerFingerprint) return;
+  _ledgerFingerprint = fp;
+
+  root.innerHTML = "";
+
+  // Header with live indicator
+  const headerBar = document.createElement("div");
+  headerBar.className = "ledger-header";
+
+  const title = document.createElement("span");
+  title.className = "ledger-title";
+  title.textContent = "Transaction Ledger";
+
+  const liveDot = document.createElement("span");
+  liveDot.className = "ledger-live-dot";
+  const liveLabel = document.createElement("span");
+  liveLabel.className = "ledger-live-label";
+  liveLabel.textContent = "Live";
+
+  const subtitle = document.createElement("span");
+  subtitle.className = "ledger-subtitle";
+  subtitle.textContent = "Solana Devnet // All protocol transactions";
+
+  headerBar.appendChild(title);
+  headerBar.appendChild(liveDot);
+  headerBar.appendChild(liveLabel);
+  headerBar.appendChild(subtitle);
+  root.appendChild(headerBar);
+
+  // Stats bar
+  const statsBar = document.createElement("div");
+  statsBar.className = "ledger-stats";
+
+  const totalTx = entries.length;
+  const totalVolume = entries.reduce((acc, e) => acc + (e.amountLamports || 0), 0);
+  const lockCount = entries.filter((e) => e.type === "LOCK").length;
+  const payCount = entries.filter((e) => e.type === "SUBSCRIBER_PAY" || e.type === "VERIFIER_PAY" || e.type === "RELEASE").length;
+  const chainLogs = entries.filter((e) => e.type === "CHAIN_LOG").length;
+
+  const statItems = [
+    { label: "Transactions", value: String(totalTx), sub: "total recorded" },
+    { label: "Volume", value: fmtSol(totalVolume), sub: fmtLamports(totalVolume) },
+    { label: "Escrow Locks", value: String(lockCount), sub: lockCount === 1 ? "bounty locked" : "bounties locked" },
+    { label: "Payments", value: String(payCount), sub: chainLogs + " on-chain logs" },
+  ];
+
+  for (const s of statItems) {
+    const cell = document.createElement("div");
+    cell.className = "ledger-stat-cell";
+    const val = document.createElement("div");
+    val.className = "ledger-stat-value";
+    val.textContent = s.value;
+    const lbl = document.createElement("div");
+    lbl.className = "ledger-stat-label";
+    lbl.textContent = s.label;
+    const sub = document.createElement("div");
+    sub.className = "ledger-stat-sub";
+    sub.textContent = s.sub;
+    cell.appendChild(val);
+    cell.appendChild(lbl);
+    cell.appendChild(sub);
+    statsBar.appendChild(cell);
+  }
+  root.appendChild(statsBar);
+
+  if (!entries.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.style.height = "200px";
+    empty.innerHTML = '<div class="empty-state-icon">&#128209;</div>';
+    const msg = document.createElement("div");
+    msg.textContent = "No transactions yet. Run the agent to create a task with a bounty lock.";
+    empty.appendChild(msg);
+    root.appendChild(empty);
+    return;
+  }
+
+  // Entries feed with timeline
+  const feed = document.createElement("div");
+  feed.className = "ledger-feed";
+
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
+    const card = document.createElement("div");
+    card.className = "ledger-card ledger-type-" + entry.type;
+    card.style.animationDelay = Math.min(i * 50, 500) + "ms";
+
+    // Header row
+    const header = document.createElement("div");
+    header.className = "ledger-card-header";
+
+    const typeTag = document.createElement("span");
+    typeTag.className = "ledger-type-tag";
+    const icon = document.createElement("span");
+    icon.className = "ledger-type-icon";
+    icon.textContent = ledgerTypeIcon(entry.type);
+    typeTag.appendChild(icon);
+    typeTag.appendChild(document.createTextNode(" " + ledgerTypeLabel(entry.type)));
+
+    const time = document.createElement("span");
+    time.className = "ledger-time";
+    time.textContent = fmtAgo(nowMs() - entry.timestampMs);
+
+    header.appendChild(typeTag);
+    header.appendChild(time);
+    card.appendChild(header);
+
+    // Amount
+    if (entry.amountLamports > 0) {
+      const amtRow = document.createElement("div");
+      amtRow.className = "ledger-amount-row";
+      const solAmt = document.createElement("span");
+      solAmt.className = "ledger-sol";
+      solAmt.textContent = fmtSol(entry.amountLamports);
+      const lamAmt = document.createElement("span");
+      lamAmt.className = "ledger-lamports";
+      lamAmt.textContent = fmtLamports(entry.amountLamports);
+      amtRow.appendChild(solAmt);
+      amtRow.appendChild(lamAmt);
+      card.appendChild(amtRow);
+    }
+
+    // From → To
+    if (entry.fromPubkey || entry.toPubkey) {
+      const addrRow = document.createElement("div");
+      addrRow.className = "ledger-addr-row";
+      if (entry.fromPubkey) {
+        const from = document.createElement("span");
+        from.className = "ledger-addr";
+        from.textContent = short(entry.fromPubkey, 6);
+        from.title = entry.fromPubkey;
+        addrRow.appendChild(from);
+      }
+      if (entry.fromPubkey && entry.toPubkey) {
+        const arrow = document.createElement("span");
+        arrow.className = "ledger-arrow";
+        arrow.textContent = "\u2192";
+        addrRow.appendChild(arrow);
+      }
+      if (entry.toPubkey) {
+        const to = document.createElement("span");
+        to.className = "ledger-addr";
+        to.textContent = short(entry.toPubkey, 6);
+        to.title = entry.toPubkey;
+        addrRow.appendChild(to);
+      }
+      card.appendChild(addrRow);
+    }
+
+    // Tx sig link
+    const txRow = document.createElement("div");
+    txRow.className = "ledger-tx-row";
+    const txLabel = document.createElement("span");
+    txLabel.className = "ledger-tx-label";
+    txLabel.textContent = "Sig";
+    txRow.appendChild(txLabel);
+    const txLink = document.createElement("a");
+    txLink.className = "ledger-tx-link";
+    txLink.href = EXPLORER_TX(entry.txSig);
+    txLink.target = "_blank";
+    txLink.rel = "noreferrer";
+    txLink.textContent = short(entry.txSig, 10);
+    txLink.title = entry.txSig;
+    txRow.appendChild(txLink);
+    card.appendChild(txRow);
+
+    // Task + status footer
+    const footer = document.createElement("div");
+    footer.className = "ledger-card-footer";
+
+    const taskLink = document.createElement("a");
+    taskLink.className = "ledger-task-link";
+    taskLink.href = "#";
+    taskLink.textContent = "Task " + short(entry.taskId, 5);
+    taskLink.onclick = (e) => {
+      e.preventDefault();
+      State.selectedTaskId = entry.taskId;
+      setActiveTab("all");
+    };
+    footer.appendChild(taskLink);
+
+    const pill = document.createElement("span");
+    pill.className = "status-pill " + statusPillClass(entry.status);
+    pill.textContent = statusLabel(entry.status);
+    footer.appendChild(pill);
+
+    const desc = document.createElement("span");
+    desc.className = "ledger-desc";
+    desc.textContent = entry.description;
+    footer.appendChild(desc);
+
+    card.appendChild(footer);
+    feed.appendChild(card);
+  }
+
+  root.appendChild(feed);
+}
+
 // ── Render: Activity ────────────────────────────────
 
 function renderActivity() {
@@ -1123,24 +1351,43 @@ function setActiveTab(filter) {
   // If switching to agents view, toggle it from the header button
   if (filter === "agents") {
     if (State.view === "agents") {
-      // Toggle back to tasks
       showTasksView();
       return;
     }
     State.view = "agents";
     $("agentsBtn").classList.add("active");
+    $("ledgerBtn").classList.remove("active");
     $("detail").style.display = "none";
     $("agentPool").style.display = "block";
+    $("ledgerView").style.display = "none";
     renderAgentPool();
+    return;
+  }
+
+  // Ledger view — toggle from header button
+  if (filter === "ledger") {
+    if (State.view === "ledger") {
+      showTasksView();
+      return;
+    }
+    State.view = "ledger";
+    $("ledgerBtn").classList.add("active");
+    $("agentsBtn").classList.remove("active");
+    $("detail").style.display = "none";
+    $("agentPool").style.display = "none";
+    $("ledgerView").style.display = "block";
+    // Fetch ledger data then render
+    API.getLedger().catch(() => null).then((data) => {
+      if (data && Array.isArray(data.entries)) State.ledgerEntries = data.entries;
+      renderLedger(true);
+    });
     return;
   }
 
   // Task filter tabs
   State.filter = filter;
   const allTabs = ["tabOpen", "tabAnswered", "tabPaid", "tabAll", "tabReview"];
-  for (const id of allTabs) {
-    $(id).classList.remove("active");
-  }
+  for (const id of allTabs) $(id).classList.remove("active");
   const map = { open: "tabOpen", answered: "tabAnswered", paid: "tabPaid", all: "tabAll", review: "tabReview" };
   $(map[filter]).classList.add("active");
   showTasksView();
@@ -1149,8 +1396,10 @@ function setActiveTab(filter) {
 function showTasksView() {
   State.view = "tasks";
   $("agentsBtn").classList.remove("active");
+  $("ledgerBtn").classList.remove("active");
   $("detail").style.display = "";
   $("agentPool").style.display = "none";
+  $("ledgerView").style.display = "none";
   renderTaskList();
   renderDetail();
 }
@@ -1183,16 +1432,19 @@ async function refresh() {
     const prevIds = new Set(State.tasks.map((t) => t.id));
     State.tasks = (data && data.tasks) || [];
 
-    // Fetch agents and trust in parallel (non-blocking)
+    // Fetch agents, trust, and ledger in parallel (non-blocking)
     Promise.all([
       API.listAgents().catch(() => null),
       API.getTrust().catch(() => null),
-    ]).then(([agentsData, trustData]) => {
+      API.getLedger().catch(() => null),
+    ]).then(([agentsData, trustData, ledgerData]) => {
       if (agentsData && Array.isArray(agentsData.agents)) State.agents = agentsData.agents;
       else if (agentsData && Array.isArray(agentsData)) State.agents = agentsData;
       if (trustData && Array.isArray(trustData.scores)) State.trustScores = trustData.scores;
       else if (trustData && Array.isArray(trustData)) State.trustScores = trustData;
+      if (ledgerData && Array.isArray(ledgerData.entries)) State.ledgerEntries = ledgerData.entries;
       if (State.view === "agents") renderAgentPool();
+      if (State.view === "ledger") renderLedger();
     });
 
     if (_initialLoad) {
@@ -1236,6 +1488,12 @@ function connectWs() {
       const msg = JSON.parse(evt.data || "{}");
       if (msg && msg.type) {
         pushActivity("ws", msg.type, msg.taskId ? `task=${short(msg.taskId, 5)}` : "");
+        if (msg.type === "ledger.new" && State.view === "ledger") {
+          API.getLedger().catch(() => null).then((data) => {
+            if (data && Array.isArray(data.entries)) State.ledgerEntries = data.entries;
+            renderLedger();
+          });
+        }
         if (msg.type === "agent.registered" || msg.type === "trust.updated") {
           // Refresh agents immediately
           API.listAgents().catch(() => null).then((d) => {
@@ -1278,6 +1536,7 @@ function boot() {
   });
 
   // Header buttons
+  $("ledgerBtn").onclick = () => setActiveTab("ledger");
   $("agentsBtn").onclick = () => setActiveTab("agents");
   $("refreshBtn").onclick = refresh;
   $("settingsBtn").onclick = openSettings;

@@ -1,5 +1,5 @@
 import type { Server as HttpServer } from "node:http";
-import type { TaskStatus } from "@unblock/common";
+import type { TaskStatus, LedgerEntry } from "@unblock/common";
 import { WebSocketServer } from "ws";
 
 export type WsEvent =
@@ -7,7 +7,8 @@ export type WsEvent =
   | { type: "task.updated"; taskId: string; status: TaskStatus }
   | { type: "agent.registered"; agentId: string; role: string }
   | { type: "trust.updated"; agentId: string; score: number }
-  | { type: "pubsub"; topic: string; payload: Record<string, unknown> };
+  | { type: "pubsub"; topic: string; payload: Record<string, unknown> }
+  | { type: "ledger.new"; entry: LedgerEntry };
 
 export class WsHub {
   private wss: WebSocketServer;
