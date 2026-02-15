@@ -9,6 +9,10 @@ export type AgentEnv = {
   llmProvider: "openai" | "anthropic";
   openaiApiKey?: string;
   anthropicApiKey?: string;
+  openaiModel: string;
+  anthropicModel: string;
+  showPrompts: boolean;
+  reasoningTest: boolean;
   agentKeypairPath: string;
   escrowPubkey?: string;
   solanaRpcUrl: string;
@@ -26,6 +30,10 @@ export function loadEnv(): AgentEnv {
     llmProvider: (process.env.LLM_PROVIDER || "openai") as "openai" | "anthropic",
     openaiApiKey: process.env.OPENAI_API_KEY || undefined,
     anthropicApiKey: process.env.ANTHROPIC_API_KEY || undefined,
+    openaiModel: process.env.OPENAI_MODEL || "gpt-4o",
+    anthropicModel: process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-latest",
+    showPrompts: (process.env.SHOW_PROMPTS || "0") === "1",
+    reasoningTest: (process.env.REASONING_TEST || "0") === "1",
     agentKeypairPath:
       process.env.AGENT_KEYPAIR_PATH || path.resolve(process.cwd(), "../../.secrets/agent.json"),
     escrowPubkey: process.env.ESCROW_PUBKEY || undefined,

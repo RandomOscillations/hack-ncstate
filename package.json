@@ -11,6 +11,7 @@
     "dev:server": "npm -w apps/server run dev",
     "predev:agent": "npm -w @unblock/common run build",
     "dev:agent": "npm -w apps/agent run dev",
+    "test": "npm run typecheck && npm run build",
     "build": "npm -w packages/common run build && npm -w apps/server run build && npm -w apps/agent run build",
     "typecheck": "npm -w packages/common run typecheck && npm -w apps/server run typecheck && npm -w apps/agent run typecheck",
     "scripts:gen-keypairs": "npm -w scripts run gen-keypairs",
