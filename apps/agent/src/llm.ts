@@ -77,16 +77,13 @@ async function callAnthropic(apiKey: string, model: string, prompt: string): Pro
 }
 
 async function callGemini(apiKey: string, model: string, prompt: string): Promise<string> {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-      }),
-    }
-  );
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${apiKey}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+    }),
+  });
   if (!res.ok) throw new Error(`Gemini API error: ${res.status} ${await res.text()}`);
   const data = (await res.json()) as any;
   return data.candidates[0].content.parts[0].text;

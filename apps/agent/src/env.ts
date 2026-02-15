@@ -38,7 +38,7 @@ export function loadEnv(): AgentEnv {
     geminiApiKey: process.env.GEMINI_API_KEY || undefined,
     openaiModel: process.env.OPENAI_MODEL || "gpt-4o",
     anthropicModel: process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-latest",
-    geminiModel: process.env.GEMINI_MODEL || "gemini-2.0-flash",
+    geminiModel: process.env.GEMINI_MODEL || "gemini-2.5-pro",
     showPrompts: (process.env.SHOW_PROMPTS || "0") === "1",
     reasoningTest: (process.env.REASONING_TEST || "0") === "1",
     agentKeypairPath:
