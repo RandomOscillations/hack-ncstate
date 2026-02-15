@@ -6,9 +6,10 @@ export type AgentEnv = {
   agentPubkey: string;
   demoCache: boolean;
   mockSolana: boolean;
-  llmProvider: "openai" | "anthropic";
+  llmProvider: "openai" | "anthropic" | "gemini";
   openaiApiKey?: string;
   anthropicApiKey?: string;
+  geminiApiKey?: string;
   agentKeypairPath: string;
   escrowPubkey?: string;
   solanaRpcUrl: string;
@@ -23,9 +24,10 @@ export function loadEnv(): AgentEnv {
     agentPubkey: process.env.AGENT_PUBKEY || "demo-agent",
     demoCache: (process.env.DEMO_CACHE || "1") === "1",
     mockSolana: (process.env.MOCK_SOLANA || "1") === "1",
-    llmProvider: (process.env.LLM_PROVIDER || "openai") as "openai" | "anthropic",
+    llmProvider: (process.env.LLM_PROVIDER || "openai") as "openai" | "anthropic" | "gemini",
     openaiApiKey: process.env.OPENAI_API_KEY || undefined,
     anthropicApiKey: process.env.ANTHROPIC_API_KEY || undefined,
+    geminiApiKey: process.env.GEMINI_API_KEY || undefined,
     agentKeypairPath:
       process.env.AGENT_KEYPAIR_PATH || path.resolve(process.cwd(), "../../.secrets/agent.json"),
     escrowPubkey: process.env.ESCROW_PUBKEY || undefined,
