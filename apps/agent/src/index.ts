@@ -62,9 +62,15 @@ async function main() {
   console.log(ambiguity.text);
   divider();
 
+  // Pick a random bounty between min and max
+  const bountyLamports =
+    Math.floor(Math.random() * (env.bountyLamportsMax - env.bountyLamportsMin + 1)) +
+    env.bountyLamportsMin;
+
   // Lock bounty into escrow
+  log(`Bounty: ${(bountyLamports / 1_000_000_000).toFixed(4)} SOL (${bountyLamports.toLocaleString()} lamports)`);
   log("Locking bounty into escrow...");
-  const { lockTxSig } = await sendLockTransaction(env);
+  const { lockTxSig } = await sendLockTransaction(env, bountyLamports);
   log(`lock tx: ${lockTxSig}`);
 
   // Create task on server
@@ -76,7 +82,7 @@ async function main() {
       "Page A is trust-focused with a clean layout. " +
       "Page B is engagement-focused with progressive disclosure.",
     imageUrls: ["/assets/landing_a.svg", "/assets/landing_b.svg"],
-    bountyLamports: env.bountyLamports,
+    bountyLamports,
     agentPubkey: env.agentPubkey,
     lockTxSig,
     expiresInSec: 600,
@@ -84,7 +90,6 @@ async function main() {
 
   const created = await api.createTask(payload);
   log(`task created: ${created.taskId} (status=${created.status})`);
-  log(`bounty: ${env.bountyLamports.toLocaleString()} lamports`);
   log("Waiting for human resolver...");
   divider();
 

@@ -5,7 +5,8 @@ loadDotEnvFromCwd(".env");
 
 export type AgentEnv = {
   serverBaseUrl: string;
-  bountyLamports: number;
+  bountyLamportsMin: number;
+  bountyLamportsMax: number;
   agentPubkey: string;
   demoCache: boolean;
   mockSolana: boolean;
@@ -29,7 +30,8 @@ export type AgentEnv = {
 export function loadEnv(): AgentEnv {
   return {
     serverBaseUrl: process.env.SERVER_BASE_URL || "http://localhost:4000",
-    bountyLamports: Number(process.env.BOUNTY_LAMPORTS || "50000000"),
+    bountyLamportsMin: Number(process.env.BOUNTY_LAMPORTS_MIN || "10000000"),
+    bountyLamportsMax: Number(process.env.BOUNTY_LAMPORTS_MAX || "100000000"),
     agentPubkey: process.env.AGENT_PUBKEY || "demo-agent",
     demoCache: (process.env.DEMO_CACHE || "1") === "1",
     mockSolana: (process.env.MOCK_SOLANA || "1") === "1",

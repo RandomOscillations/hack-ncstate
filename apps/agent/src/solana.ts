@@ -4,7 +4,7 @@ export type LockResult = {
   lockTxSig: string;
 };
 
-export async function sendLockTransaction(env: AgentEnv): Promise<LockResult> {
+export async function sendLockTransaction(env: AgentEnv, bountyLamports: number): Promise<LockResult> {
   if (env.mockSolana) {
     const mockSig = `MOCK_LOCK_${Date.now()}`;
     return { lockTxSig: mockSig };
@@ -33,7 +33,7 @@ export async function sendLockTransaction(env: AgentEnv): Promise<LockResult> {
     SystemProgram.transfer({
       fromPubkey: agentKeypair.publicKey,
       toPubkey: escrowPubkey,
-      lamports: env.bountyLamports,
+      lamports: bountyLamports,
     })
   );
 
