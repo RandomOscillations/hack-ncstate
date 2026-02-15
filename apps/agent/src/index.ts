@@ -1,7 +1,7 @@
 import type { CreateTaskRequest } from "@unblock/common";
 import { loadEnv } from "./env";
 import { ServerApi } from "./api";
-import { runStep1, runStep2, runAmbiguityCheck, runFinalStep } from "./llm";
+import { runReasoningProbe, runStep1, runStep2, runAmbiguityCheck, runFinalStep } from "./llm";
 import { sendLockTransaction } from "./solana";
 
 function log(msg: string) {
@@ -26,6 +26,14 @@ async function main() {
   log(`demo cache:   ${env.demoCache ? "ON" : "OFF"}`);
   log(`llm provider: ${env.llmProvider}`);
   divider();
+
+  // Optional: explicit LLM reasoning probe (for testing that "real LLM" is wired correctly).
+  if (env.reasoningTest) {
+    log("Reasoning probe (LLM test case)...");
+    const probe = await runReasoningProbe(env);
+    console.log(probe.text);
+    divider();
+  }
 
   // ── Step 1: Analyze Landing Page A ────────────────────────
   log("Step 1/5 - Analyzing Landing Page A...");
