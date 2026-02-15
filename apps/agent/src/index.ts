@@ -27,6 +27,15 @@ async function main() {
   log(`llm provider: ${env.llmProvider}`);
   divider();
 
+  // Fail fast before spending LLM tokens if the server isn't up.
+  const ok = await api.health();
+  if (!ok) {
+    throw new Error(
+      `Server health check failed at ${env.serverBaseUrl}. ` +
+        `Start it with: MOCK_SOLANA=1 RESOLVER_DEMO_TOKEN=demo-token npm run dev:server`
+    );
+  }
+
   // Optional: explicit LLM reasoning probe (for testing that "real LLM" is wired correctly).
   if (env.reasoningTest) {
     log("Reasoning probe (LLM test case)...");
