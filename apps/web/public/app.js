@@ -337,7 +337,7 @@ function renderStats() {
     root.innerHTML = "";
     for (const s of stats) {
       const el = document.createElement("div");
-      el.className = "stat-cell";
+      el.className = "stat-cell" + (State.filter === s.filter ? " active" : "");
       el.style.cursor = "pointer";
       el.onclick = () => setActiveTab(s.filter);
 
@@ -357,7 +357,7 @@ function renderStats() {
       el.appendChild(numEl);
       el.appendChild(subEl);
       root.appendChild(el);
-      _statRefs.push({ numEl, subEl, key: s.key });
+      _statRefs.push({ el, numEl, subEl, key: s.key, filter: s.filter });
     }
   } else {
     // Subsequent renders: update values in place
@@ -373,6 +373,8 @@ function renderStats() {
         ref.numEl.textContent = String(s.value);
       }
       ref.subEl.textContent = s.sub;
+      // Update active highlight
+      ref.el.classList.toggle("active", State.filter === ref.filter);
     }
   }
 
@@ -966,10 +968,12 @@ function renderDetail() {
   metaSection.appendChild(grid);
   mainCol.appendChild(metaSection);
 
-  // Assemble columns
+  // Assemble columns — full width when sidebar is empty
   columns.appendChild(mainCol);
   if (sideCol.childNodes.length > 0) {
     columns.appendChild(sideCol);
+  } else {
+    columns.classList.add("full-width");
   }
   root.appendChild(columns);
 }
@@ -1073,224 +1077,166 @@ function renderAgentPool() {
 
 // ── Render: Ledger ──────────────────────────────────
 
-function ledgerTypeIcon(type) {
-  const map = {
-    LOCK: "\u{1F512}", RELEASE: "\u{1F513}", REFUND: "\u21A9",
-    SUBSCRIBER_PAY: "\u{1F4B8}", VERIFIER_PAY: "\u{1F4B8}", CHAIN_LOG: "\u{1F4DD}",
-  };
-  return map[type] || "\u2022";
-}
-
 function ledgerTypeLabel(type) {
   const map = {
     LOCK: "Lock", RELEASE: "Release", REFUND: "Refund",
-    SUBSCRIBER_PAY: "Subscriber Pay", VERIFIER_PAY: "Verifier Pay", CHAIN_LOG: "Chain Log",
+    SUBSCRIBER_PAY: "Sub Pay", VERIFIER_PAY: "Ver Pay", CHAIN_LOG: "Chain",
   };
   return map[type] || type;
+}
+
+function ledgerGroupDotClass(taskId) {
+  const t = State.tasks.find((x) => x.id === taskId);
+  if (!t) return "default";
+  const s = t.status;
+  if (s === "CONFIRMED_PAID" || s === "VERIFIED_PAID") return "paid";
+  if (s === "OPEN" || s === "CLAIMED") return "open";
+  if (s === "REJECTED_REFUNDED" || s === "EXPIRED_REFUNDED") return "refunded";
+  if (s === "UNDER_REVIEW" || s === "SCORED") return "review";
+  if (s === "DISPUTED") return "disputed";
+  return "default";
 }
 
 function renderLedger(force) {
   const root = $("ledgerView");
   const entries = State.ledgerEntries;
 
-  // Skip rebuild if data hasn't changed
   const fp = entries.map((e) => e.id).join(",");
   if (!force && fp === _ledgerFingerprint) return;
   _ledgerFingerprint = fp;
 
   root.innerHTML = "";
 
-  // Header with live indicator
-  const headerBar = document.createElement("div");
-  headerBar.className = "ledger-header";
+  const container = document.createElement("div");
+  container.className = "lt-container";
 
-  const title = document.createElement("span");
-  title.className = "ledger-title";
-  title.textContent = "Transaction Ledger";
+  // Header
+  const hdr = document.createElement("div");
+  hdr.className = "lt-header";
+  hdr.innerHTML = `<span class="lt-title">Transaction Ledger</span><span class="lt-live-dot"></span><span class="lt-live-label">Live</span><span class="lt-subtitle">Solana Devnet &middot; Protocol Tree</span>`;
+  container.appendChild(hdr);
 
-  const liveDot = document.createElement("span");
-  liveDot.className = "ledger-live-dot";
-  const liveLabel = document.createElement("span");
-  liveLabel.className = "ledger-live-label";
-  liveLabel.textContent = "Live";
-
-  const subtitle = document.createElement("span");
-  subtitle.className = "ledger-subtitle";
-  subtitle.textContent = "Solana Devnet // All protocol transactions";
-
-  headerBar.appendChild(title);
-  headerBar.appendChild(liveDot);
-  headerBar.appendChild(liveLabel);
-  headerBar.appendChild(subtitle);
-  root.appendChild(headerBar);
-
-  // Stats bar
-  const statsBar = document.createElement("div");
-  statsBar.className = "ledger-stats";
-
+  // Stats
   const totalTx = entries.length;
-  const totalVolume = entries.reduce((acc, e) => acc + (e.amountLamports || 0), 0);
+  const totalVolume = entries.reduce((a, e) => a + (e.amountLamports || 0), 0);
   const lockCount = entries.filter((e) => e.type === "LOCK").length;
   const payCount = entries.filter((e) => e.type === "SUBSCRIBER_PAY" || e.type === "VERIFIER_PAY" || e.type === "RELEASE").length;
-  const chainLogs = entries.filter((e) => e.type === "CHAIN_LOG").length;
 
+  const statsEl = document.createElement("div");
+  statsEl.className = "lt-stats";
   const statItems = [
-    { label: "Transactions", value: String(totalTx), sub: "total recorded" },
-    { label: "Volume", value: fmtSol(totalVolume), sub: fmtLamports(totalVolume) },
-    { label: "Escrow Locks", value: String(lockCount), sub: lockCount === 1 ? "bounty locked" : "bounties locked" },
-    { label: "Payments", value: String(payCount), sub: chainLogs + " on-chain logs" },
+    { icon: "\u25C8", label: "Transactions", value: String(totalTx) },
+    { icon: "\u25B2", label: "Volume", value: fmtSol(totalVolume) },
+    { icon: "\u25A0", label: "Locks", value: String(lockCount) },
+    { icon: "\u25CF", label: "Payments", value: String(payCount) },
   ];
-
   for (const s of statItems) {
     const cell = document.createElement("div");
-    cell.className = "ledger-stat-cell";
-    const lbl = document.createElement("div");
-    lbl.className = "ledger-stat-label";
-    lbl.textContent = s.label;
-    const val = document.createElement("div");
-    val.className = "ledger-stat-value";
-    val.textContent = s.value;
-    const sub = document.createElement("div");
-    sub.className = "ledger-stat-sub";
-    sub.textContent = s.sub;
-    cell.appendChild(lbl);
-    cell.appendChild(val);
-    cell.appendChild(sub);
-    statsBar.appendChild(cell);
+    cell.className = "lt-stat";
+    cell.innerHTML = `<div class="lt-stat-icon">${s.icon}</div><div class="lt-stat-label">${s.label}</div><div class="lt-stat-value">${s.value}</div>`;
+    statsEl.appendChild(cell);
   }
-  root.appendChild(statsBar);
+  container.appendChild(statsEl);
 
   if (!entries.length) {
-    const empty = document.createElement("div");
-    empty.className = "empty-state";
-    empty.style.height = "200px";
-    empty.innerHTML = '<div class="empty-state-icon">&#128209;</div>';
-    const msg = document.createElement("div");
-    msg.textContent = "No transactions yet. Run the agent to create a task with a bounty lock.";
-    empty.appendChild(msg);
-    root.appendChild(empty);
+    container.innerHTML += `<div class="lt-empty"><div class="lt-empty-icon">\u25C7</div><div>No transactions yet. Run the agent to create a task.</div></div>`;
+    root.appendChild(container);
     return;
   }
 
-  // Entries feed with timeline
-  const feed = document.createElement("div");
-  feed.className = "ledger-feed";
-
-  for (let i = 0; i < entries.length; i++) {
-    const entry = entries[i];
-    const card = document.createElement("div");
-    card.className = "ledger-card ledger-type-" + entry.type;
-    card.style.animationDelay = Math.min(i * 50, 500) + "ms";
-
-    // Header row
-    const header = document.createElement("div");
-    header.className = "ledger-card-header";
-
-    const typeTag = document.createElement("span");
-    typeTag.className = "ledger-type-tag";
-    const icon = document.createElement("span");
-    icon.className = "ledger-type-icon";
-    icon.textContent = ledgerTypeIcon(entry.type);
-    typeTag.appendChild(icon);
-    typeTag.appendChild(document.createTextNode(" " + ledgerTypeLabel(entry.type)));
-
-    const time = document.createElement("span");
-    time.className = "ledger-time";
-    time.textContent = fmtAgo(nowMs() - entry.timestampMs);
-
-    header.appendChild(typeTag);
-    header.appendChild(time);
-    card.appendChild(header);
-
-    // Amount
-    if (entry.amountLamports > 0) {
-      const amtRow = document.createElement("div");
-      amtRow.className = "ledger-amount-row";
-      const solAmt = document.createElement("span");
-      solAmt.className = "ledger-sol";
-      solAmt.textContent = fmtSol(entry.amountLamports);
-      const lamAmt = document.createElement("span");
-      lamAmt.className = "ledger-lamports";
-      lamAmt.textContent = fmtLamports(entry.amountLamports);
-      amtRow.appendChild(solAmt);
-      amtRow.appendChild(lamAmt);
-      card.appendChild(amtRow);
-    }
-
-    // From → To
-    if (entry.fromPubkey || entry.toPubkey) {
-      const addrRow = document.createElement("div");
-      addrRow.className = "ledger-addr-row";
-      if (entry.fromPubkey) {
-        const from = document.createElement("span");
-        from.className = "ledger-addr";
-        from.textContent = short(entry.fromPubkey, 6);
-        from.title = entry.fromPubkey;
-        addrRow.appendChild(from);
-      }
-      if (entry.fromPubkey && entry.toPubkey) {
-        const arrow = document.createElement("span");
-        arrow.className = "ledger-arrow";
-        arrow.textContent = "\u2192";
-        addrRow.appendChild(arrow);
-      }
-      if (entry.toPubkey) {
-        const to = document.createElement("span");
-        to.className = "ledger-addr";
-        to.textContent = short(entry.toPubkey, 6);
-        to.title = entry.toPubkey;
-        addrRow.appendChild(to);
-      }
-      card.appendChild(addrRow);
-    }
-
-    // Tx sig link
-    const txRow = document.createElement("div");
-    txRow.className = "ledger-tx-row";
-    const txLabel = document.createElement("span");
-    txLabel.className = "ledger-tx-label";
-    txLabel.textContent = "Sig";
-    txRow.appendChild(txLabel);
-    const txLink = document.createElement("a");
-    txLink.className = "ledger-tx-link";
-    txLink.href = EXPLORER_TX(entry.txSig);
-    txLink.target = "_blank";
-    txLink.rel = "noreferrer";
-    txLink.textContent = short(entry.txSig, 10);
-    txLink.title = entry.txSig;
-    txRow.appendChild(txLink);
-    card.appendChild(txRow);
-
-    // Task + status footer
-    const footer = document.createElement("div");
-    footer.className = "ledger-card-footer";
-
-    const taskLink = document.createElement("a");
-    taskLink.className = "ledger-task-link";
-    taskLink.href = "#";
-    taskLink.textContent = "Task " + short(entry.taskId, 5);
-    taskLink.onclick = (e) => {
-      e.preventDefault();
-      State.selectedTaskId = entry.taskId;
-      setActiveTab("all");
-    };
-    footer.appendChild(taskLink);
-
-    const pill = document.createElement("span");
-    pill.className = "status-pill " + statusPillClass(entry.status);
-    pill.textContent = statusLabel(entry.status);
-    footer.appendChild(pill);
-
-    const desc = document.createElement("span");
-    desc.className = "ledger-desc";
-    desc.textContent = entry.description;
-    footer.appendChild(desc);
-
-    card.appendChild(footer);
-    feed.appendChild(card);
+  // Group entries by taskId
+  const groups = new Map();
+  for (const e of entries) {
+    const key = e.taskId || "unknown";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(e);
   }
 
-  root.appendChild(feed);
+  // Sort groups by most recent entry descending
+  const sortedGroups = [...groups.entries()].sort((a, b) => {
+    const aMax = Math.max(...a[1].map((e) => e.timestampMs));
+    const bMax = Math.max(...b[1].map((e) => e.timestampMs));
+    return bMax - aMax;
+  });
+
+  // Sort entries within each group ascending
+  for (const [, arr] of sortedGroups) arr.sort((a, b) => a.timestampMs - b.timestampMs);
+
+  // Tree
+  const tree = document.createElement("div");
+  tree.className = "lt-tree";
+
+  // Root node
+  const rootNode = document.createElement("div");
+  rootNode.className = "lt-root";
+  rootNode.innerHTML = `<span class="lt-root-dot"></span><span class="lt-root-label">Escrow Protocol</span><span class="lt-root-meta">${sortedGroups.length} task${sortedGroups.length !== 1 ? "s" : ""} &middot; ${totalTx} tx</span>`;
+  tree.appendChild(rootNode);
+
+  // Groups container
+  const groupsEl = document.createElement("div");
+  groupsEl.className = "lt-groups";
+
+  let groupIdx = 0;
+  for (const [taskId, taskEntries] of sortedGroups) {
+    const task = State.tasks.find((t) => t.id === taskId);
+    const question = task ? (task.question || "Unknown task") : "Task " + short(taskId, 6);
+    const groupVol = taskEntries.reduce((a, e) => a + (e.amountLamports || 0), 0);
+
+    const group = document.createElement("div");
+    group.className = "lt-group";
+    group.style.animationDelay = Math.min(groupIdx * 60, 400) + "ms";
+
+    // Head
+    const head = document.createElement("div");
+    head.className = "lt-group-head open";
+    head.innerHTML = `<span class="lt-arrow">\u25B6</span><span class="lt-group-dot ${ledgerGroupDotClass(taskId)}"></span><div class="lt-group-info"><div class="lt-group-question">${question.replace(/</g, "&lt;")}</div><div class="lt-group-meta"><span class="lt-group-sol">${fmtSol(groupVol)}</span><span class="lt-group-count">${taskEntries.length} tx</span><span>${fmtAgo(nowMs() - taskEntries[taskEntries.length - 1].timestampMs)}</span></div></div>`;
+
+    // Branches wrapper (collapse target)
+    const branchWrap = document.createElement("div");
+    branchWrap.className = "lt-branches-wrap";
+    const branches = document.createElement("div");
+    branches.className = "lt-branches";
+
+    for (const entry of taskEntries) {
+      const leaf = document.createElement("div");
+      leaf.className = "lt-leaf";
+
+      let html = `<span class="lt-dot ${entry.type}"></span>`;
+      html += `<span class="lt-leaf-type">${ledgerTypeLabel(entry.type)}</span>`;
+      html += `<span class="lt-leaf-time">${fmtAgo(nowMs() - entry.timestampMs)}</span>`;
+      if (entry.amountLamports > 0) {
+        html += `<span class="lt-leaf-amount">${fmtSol(entry.amountLamports)}</span>`;
+      }
+      if (entry.fromPubkey || entry.toPubkey) {
+        html += `<span class="lt-leaf-flow">`;
+        if (entry.fromPubkey) html += `<span class="lt-addr" title="${entry.fromPubkey}">${short(entry.fromPubkey, 4)}</span>`;
+        if (entry.fromPubkey && entry.toPubkey) html += `<span class="lt-flow-arrow">\u2192</span>`;
+        if (entry.toPubkey) html += `<span class="lt-addr" title="${entry.toPubkey}">${short(entry.toPubkey, 4)}</span>`;
+        html += `</span>`;
+      }
+      html += `<span class="lt-leaf-sig"><a href="${EXPLORER_TX(entry.txSig)}" target="_blank" rel="noreferrer" title="${entry.txSig}">${short(entry.txSig, 6)}</a></span>`;
+
+      leaf.innerHTML = html;
+      branches.appendChild(leaf);
+    }
+
+    branchWrap.appendChild(branches);
+
+    // Toggle collapse
+    head.addEventListener("click", () => {
+      head.classList.toggle("open");
+      branchWrap.classList.toggle("collapsed");
+    });
+
+    group.appendChild(head);
+    group.appendChild(branchWrap);
+    groupsEl.appendChild(group);
+    groupIdx++;
+  }
+
+  tree.appendChild(groupsEl);
+  container.appendChild(tree);
+  root.appendChild(container);
 }
 
 // ── Render: Activity ────────────────────────────────
@@ -1349,6 +1295,13 @@ function setConn(ok, text) {
   const dot = $("connDot");
   dot.classList.remove("ok", "bad");
   dot.classList.add(ok ? "ok" : "bad");
+  // Connection pill
+  const pill = $("connPill");
+  if (pill) {
+    pill.classList.remove("ok", "bad");
+    pill.classList.add(ok ? "ok" : "bad");
+    $("connPillLabel").textContent = ok ? "Connected" : "Disconnected";
+  }
 }
 
 function setActiveTab(filter) {
