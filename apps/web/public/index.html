@@ -4,103 +4,102 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Unblock.Agent Resolver</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <header class="topbar">
+    <header class="header">
       <div class="brand">
+        <button class="rail-toggle" id="railToggle" title="Toggle task list">&#9776;</button>
         <div class="logo">UA</div>
-        <div class="brandText">
-          <div class="title">Unblock.Agent</div>
-          <div class="subtitle">Resolver Console (Devnet Demo)</div>
+        <div>
+          <div class="brand-name">Unblock<span class="brand-dot">.</span>Agent</div>
+          <div class="brand-sub">Resolver Console // Devnet</div>
         </div>
       </div>
 
-      <div class="topbarRight">
-        <div class="conn">
-          <span class="dot" id="connDot"></span>
-          <span id="statusText">Starting...</span>
+      <div class="header-right">
+        <div class="conn-indicator">
+          <span class="conn-dot" id="connDot"></span>
+          <span class="conn-label" id="statusText">Starting...</span>
         </div>
-        <button class="btn ghost" id="refreshBtn">Refresh</button>
-        <button class="btn" id="settingsBtn">Settings</button>
+        <button class="btn-icon" id="activityBtn" title="Activity feed">&#9881;</button>
+        <button class="btn-secondary" id="refreshBtn">Refresh</button>
+        <button class="btn-secondary" id="settingsBtn">Settings</button>
       </div>
     </header>
 
+    <section class="stats-ticker" id="stats" aria-label="Stats"></section>
+
     <div class="layout">
-      <aside class="sidebar">
-        <div class="sidebarTop">
-          <div class="tabs" role="tablist" aria-label="Task filters">
-            <button class="tab active" id="tabOpen" data-filter="open">Open</button>
-            <button class="tab" id="tabAnswered" data-filter="answered">Answered</button>
-            <button class="tab" id="tabPaid" data-filter="paid">Paid</button>
-            <button class="tab" id="tabAll" data-filter="all">All</button>
-          </div>
-          <div class="searchRow">
-            <input id="search" class="input" placeholder="Search question/context..." />
-          </div>
+      <aside class="task-rail" id="taskRail">
+        <div class="tabs-bar" role="tablist" aria-label="Task filters">
+          <button class="tab active" id="tabOpen" data-filter="open">Open</button>
+          <button class="tab" id="tabAnswered" data-filter="answered">Answered</button>
+          <button class="tab" id="tabPaid" data-filter="paid">Paid</button>
+          <button class="tab" id="tabAll" data-filter="all">All</button>
         </div>
-        <div id="taskList" class="taskList" aria-label="Task list"></div>
+        <div class="search-box">
+          <input id="search" class="search-input" placeholder="Search tasks..." />
+        </div>
+        <div class="task-scroll" id="taskList" aria-label="Task list"></div>
       </aside>
 
-      <main class="content">
-        <section class="statsCard" aria-label="Stats">
-          <div class="statsGrid" id="stats"></div>
-        </section>
-
-        <section class="detailCard" aria-label="Task detail">
-          <div id="detail" class="detail"></div>
-        </section>
-      </main>
-
-      <aside class="rightbar">
-        <section class="activityCard" aria-label="Activity">
-          <div class="cardHeader">
-            <div class="cardTitle">Activity</div>
-            <div class="cardHint">WS + polling</div>
-          </div>
-          <div id="activity" class="activity"></div>
-        </section>
-      </aside>
+      <main class="detail-area" id="detail"></main>
     </div>
+
+    <!-- Activity Drawer -->
+    <aside class="activity-drawer" id="activityDrawer">
+      <div class="drawer-header">
+        <span class="drawer-title">Activity</span>
+        <button class="btn-icon" id="activityClose">&#10005;</button>
+      </div>
+      <div class="drawer-content" id="activity"></div>
+    </aside>
+    <div class="drawer-backdrop" id="drawerBackdrop"></div>
 
     <div id="toasts" class="toasts" aria-live="polite" aria-relevant="additions"></div>
 
+    <!-- Image Preview Modal -->
     <div id="modal" class="modal" aria-hidden="true">
-      <div class="modalBackdrop" id="modalBackdrop"></div>
-      <div class="modalBody" role="dialog" aria-modal="true" aria-label="Image preview">
-        <div class="modalTop">
-          <div class="modalTitle" id="modalTitle">Preview</div>
-          <button class="btn ghost" id="modalClose">Close</button>
+      <div class="modal-backdrop" id="modalBackdrop"></div>
+      <div class="modal-body wide" role="dialog" aria-modal="true" aria-label="Image preview">
+        <div class="modal-top">
+          <div class="modal-title" id="modalTitle">Preview</div>
+          <button class="btn-secondary" id="modalClose">Close</button>
         </div>
         <img id="modalImg" alt="preview" />
       </div>
     </div>
 
+    <!-- Settings Modal -->
     <div id="settingsModal" class="modal" aria-hidden="true">
-      <div class="modalBackdrop" id="settingsBackdrop"></div>
-      <div class="modalBody" role="dialog" aria-modal="true" aria-label="Settings">
-        <div class="modalTop">
-          <div class="modalTitle">Settings</div>
-          <button class="btn ghost" id="settingsClose">Close</button>
+      <div class="modal-backdrop" id="settingsBackdrop"></div>
+      <div class="modal-body" role="dialog" aria-modal="true" aria-label="Settings">
+        <div class="modal-top">
+          <div class="modal-title">Settings</div>
+          <button class="btn-secondary" id="settingsClose">Close</button>
         </div>
         <div class="form">
           <label class="field">
-            <div class="fieldLabel">Resolver Pubkey</div>
-            <input id="resolverPubkey" class="input mono" placeholder="Enter devnet pubkey" />
-            <div class="fieldHint">This is where payouts go when the agent confirms.</div>
+            <div class="field-label">Resolver Pubkey</div>
+            <input id="resolverPubkey" class="field-input" placeholder="Enter devnet pubkey" />
+            <div class="field-hint">This is where payouts go when the agent confirms.</div>
           </label>
           <label class="field">
-            <div class="fieldLabel">Demo Token</div>
-            <input id="demoToken" class="input mono" placeholder="x-demo-token" />
-            <div class="fieldHint">Server may require this for answer submissions on shared WiFi.</div>
+            <div class="field-label">Demo Token</div>
+            <input id="demoToken" class="field-input" placeholder="x-demo-token" />
+            <div class="field-hint">Server may require this for answer submissions on shared WiFi.</div>
           </label>
-          <label class="fieldRow">
+          <label class="field-row">
             <input id="soundEnabled" type="checkbox" />
             <span>Play sound on new task</span>
           </label>
-          <div class="formActions">
-            <button class="btn" id="saveSettings">Save</button>
-            <button class="btn ghost" id="clearSettings">Clear</button>
+          <div class="form-actions">
+            <button class="btn-submit" id="saveSettings">Save</button>
+            <button class="btn-secondary" id="clearSettings">Clear</button>
           </div>
         </div>
       </div>

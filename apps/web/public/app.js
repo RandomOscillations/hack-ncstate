@@ -34,6 +34,7 @@ const State = {
   activity: [],
   wsConnected: false,
   draftsByTaskId: {},
+  prevStats: { open: 0, answered: 0, paid: 0, refunded: 0 },
 };
 
 function nowMs() {
@@ -84,16 +85,20 @@ function setSettings(next) {
   localStorage.setItem("soundEnabled", next.soundEnabled ? "1" : "0");
 }
 
+// ── Toasts ──────────────────────────────────────────
+
 function toast(title, body) {
   const root = $("toasts");
   const el = document.createElement("div");
   el.className = "toast";
-  el.innerHTML = `<div class="toastTitle"></div><div class="toastBody"></div>`;
-  el.querySelector(".toastTitle").textContent = title;
-  el.querySelector(".toastBody").textContent = body || "";
+  el.innerHTML = `<div class="toast-title"></div><div class="toast-body"></div>`;
+  el.querySelector(".toast-title").textContent = title;
+  el.querySelector(".toast-body").textContent = body || "";
   root.appendChild(el);
   setTimeout(() => el.remove(), 3500);
 }
+
+// ── Helpers ─────────────────────────────────────────
 
 function isTypingAnswer() {
   const el = document.activeElement;
@@ -120,6 +125,8 @@ function pushActivity(kind, msg, meta) {
   renderActivity();
 }
 
+// ── Modals ──────────────────────────────────────────
+
 function openModal(title, imgUrl) {
   $("modalTitle").textContent = title || "Preview";
   $("modalImg").src = imgUrl;
@@ -143,6 +150,42 @@ function closeSettings() {
   $("settingsModal").setAttribute("aria-hidden", "true");
 }
 
+// ── Activity Drawer ─────────────────────────────────
+
+function openDrawer() {
+  $("activityDrawer").classList.add("open");
+  $("drawerBackdrop").classList.add("visible");
+}
+
+function closeDrawer() {
+  $("activityDrawer").classList.remove("open");
+  $("drawerBackdrop").classList.remove("visible");
+}
+
+// ── Mobile Rail Toggle ──────────────────────────────
+
+function toggleRail() {
+  $("taskRail").classList.toggle("open");
+}
+
+// ── Status Pill Helper ──────────────────────────────
+
+function statusPillClass(status) {
+  if (status === "OPEN") return "open";
+  if (status === "ANSWERED") return "answered";
+  if (status === "CONFIRMED_PAID") return "paid";
+  return "refunded";
+}
+
+function statusLabel(status) {
+  if (status === "CONFIRMED_PAID") return "PAID";
+  if (status === "REJECTED_REFUNDED") return "REFUNDED";
+  if (status === "EXPIRED_REFUNDED") return "EXPIRED";
+  return status;
+}
+
+// ── Render: Stats Ticker ────────────────────────────
+
 function renderStats() {
   const tasks = State.tasks;
   const open = tasks.filter((t) => t.status === "OPEN").length;
@@ -155,24 +198,42 @@ function renderStats() {
     .reduce((acc, t) => acc + Number(t.bountyLamports || 0), 0);
 
   const stats = [
-    { label: "Open", value: String(open), sub: "Awaiting resolver" },
-    { label: "Answered", value: String(answered), sub: "Awaiting agent confirm" },
-    { label: "Paid", value: String(paid), sub: fmtSol(totalLamports) },
-    { label: "Refunded", value: String(refunded), sub: "Rejected/expired" },
+    { label: "Open", value: open, sub: "Awaiting resolver", key: "open" },
+    { label: "Answered", value: answered, sub: "Awaiting confirm", key: "answered" },
+    { label: "Paid", value: paid, sub: fmtSol(totalLamports), key: "paid" },
+    { label: "Refunded", value: refunded, sub: "Rejected / expired", key: "refunded" },
   ];
 
   const root = $("stats");
   root.innerHTML = "";
   for (const s of stats) {
     const el = document.createElement("div");
-    el.className = "stat";
-    el.innerHTML = `<div class="statLabel"></div><div class="statValue"></div><div class="statSub"></div>`;
-    el.querySelector(".statLabel").textContent = s.label;
-    el.querySelector(".statValue").textContent = s.value;
-    el.querySelector(".statSub").textContent = s.sub;
+    el.className = "stat-cell";
+
+    const numEl = document.createElement("div");
+    numEl.className = "stat-number";
+    numEl.textContent = String(s.value);
+
+    // Flash if value changed
+    if (State.prevStats[s.key] !== undefined && State.prevStats[s.key] !== s.value) {
+      numEl.classList.add("flash");
+      setTimeout(() => numEl.classList.remove("flash"), 600);
+    }
+
+    el.innerHTML = `<div class="stat-label"></div>`;
+    el.querySelector(".stat-label").textContent = s.label;
+    el.appendChild(numEl);
+    const sub = document.createElement("div");
+    sub.className = "stat-sub";
+    sub.textContent = s.sub;
+    el.appendChild(sub);
     root.appendChild(el);
   }
+
+  State.prevStats = { open, answered, paid, refunded };
 }
+
+// ── Render: Task List ───────────────────────────────
 
 function filteredTasks() {
   const q = (State.search || "").toLowerCase().trim();
@@ -199,80 +260,95 @@ function renderTaskList() {
 
   if (!tasks.length) {
     const empty = document.createElement("div");
-    empty.className = "emptyState";
-    empty.textContent =
-      State.filter === "open"
-        ? "No open tasks yet. Run the agent to create one."
-        : "No tasks for this filter.";
+    empty.className = "empty-state";
+    empty.style.margin = "16px";
+    empty.style.height = "200px";
+    empty.innerHTML = `<div class="empty-state-icon">&#9744;</div>`;
+    const msg = document.createElement("div");
+    msg.textContent = State.filter === "open"
+      ? "No open tasks yet. Run the agent to create one."
+      : "No tasks for this filter.";
+    empty.appendChild(msg);
     root.appendChild(empty);
     return;
   }
 
-  // Keep selection stable if possible.
+  // Keep selection stable
   if (!State.selectedTaskId || !tasks.some((t) => t.id === State.selectedTaskId)) {
     State.selectedTaskId = tasks[0].id;
   }
 
   for (const t of tasks) {
-    const row = document.createElement("div");
-    row.className = "taskRow";
-    if (t.id === State.selectedTaskId) row.classList.add("selected");
+    const item = document.createElement("div");
+    item.className = `task-item status-${t.status}`;
+    if (t.id === State.selectedTaskId) item.classList.add("selected");
 
-    const createdAgo = fmtAgo(nowMs() - Number(t.createdAtMs || nowMs()));
-    const top = document.createElement("div");
-    top.className = "rowTop";
-    top.innerHTML = `<div class="rowTitle"></div><div class="rowMeta"></div>`;
-    top.querySelector(".rowTitle").textContent = t.question || "(no question)";
-    top.querySelector(".rowMeta").textContent = `${fmtSol(Number(t.bountyLamports || 0))} · ${createdAgo}`;
+    const title = document.createElement("div");
+    title.className = "task-item-title";
+    title.textContent = t.question || "(no question)";
+
+    const meta = document.createElement("div");
+    meta.className = "task-item-meta";
+
+    const bounty = document.createElement("span");
+    bounty.className = "task-item-bounty";
+    bounty.textContent = fmtSol(Number(t.bountyLamports || 0));
+
+    const time = document.createElement("span");
+    time.className = "task-item-time";
+    time.textContent = fmtAgo(nowMs() - Number(t.createdAtMs || nowMs()));
+
+    meta.appendChild(bounty);
+    meta.appendChild(time);
 
     const bottom = document.createElement("div");
-    bottom.style.display = "flex";
-    bottom.style.justifyContent = "space-between";
-    bottom.style.gap = "10px";
-    bottom.style.alignItems = "center";
+    bottom.className = "task-item-bottom";
 
-    const status = document.createElement("span");
-    status.className = "pill";
-    status.textContent = t.status;
-    status.classList.add(t.status === "OPEN" ? "ok" : "bad");
+    const pill = document.createElement("span");
+    pill.className = `status-pill ${statusPillClass(t.status)}`;
+    pill.textContent = statusLabel(t.status);
 
     const id = document.createElement("span");
-    id.className = "pill";
+    id.className = "task-item-id";
     id.textContent = short(t.id, 5);
 
-    bottom.appendChild(status);
+    bottom.appendChild(pill);
     bottom.appendChild(id);
 
-    row.appendChild(top);
-    row.appendChild(bottom);
+    item.appendChild(title);
+    item.appendChild(meta);
+    item.appendChild(bottom);
 
-    row.onclick = () => {
+    item.onclick = () => {
       State.selectedTaskId = t.id;
       renderTaskList();
       renderDetail();
+      // Close rail on mobile after selecting
+      if (window.innerWidth <= 1024) $("taskRail").classList.remove("open");
     };
 
-    root.appendChild(row);
+    root.appendChild(item);
   }
 }
 
-function kv(label, valueNode) {
-  const el = document.createElement("div");
-  el.className = "kv";
+// ── Render: Detail ──────────────────────────────────
+
+function kvRow(label, valueNode) {
   const k = document.createElement("div");
-  k.className = "k";
+  k.className = "kv-key";
   k.textContent = label;
   const v = document.createElement("div");
-  v.className = "v";
+  v.className = "kv-value";
   v.appendChild(valueNode);
-  el.appendChild(k);
-  el.appendChild(v);
-  return el;
+  const frag = document.createDocumentFragment();
+  frag.appendChild(k);
+  frag.appendChild(v);
+  return frag;
 }
 
 function linkTx(sig) {
   const a = document.createElement("a");
-  a.className = "link";
+  a.className = "kv-link";
   a.href = EXPLORER_TX(sig);
   a.target = "_blank";
   a.rel = "noreferrer";
@@ -290,68 +366,94 @@ function renderDetail() {
   const root = $("detail");
   const task = State.tasks.find((t) => t.id === State.selectedTaskId);
   if (!task) {
-    root.innerHTML = `<div class="emptyState">Select a task to view details.</div>`;
+    root.innerHTML = "";
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.innerHTML = `<div class="empty-state-icon">&#8594;</div><div>Select a task to view details</div>`;
+    root.appendChild(empty);
     return;
   }
 
   root.innerHTML = "";
 
+  // Header: question + bounty
   const header = document.createElement("div");
-  header.className = "task";
+  header.className = "detail-header";
 
-  const th = document.createElement("div");
-  th.className = "taskHeader";
-  const left = document.createElement("div");
-  left.innerHTML = `<div class="q"></div><div class="ctx"></div>`;
-  left.querySelector(".q").textContent = task.question || "";
-  left.querySelector(".ctx").textContent = task.context || "";
+  const questionEl = document.createElement("div");
+  questionEl.className = "detail-question";
+  questionEl.textContent = task.question || "";
 
-  const right = document.createElement("div");
-  right.style.display = "grid";
-  right.style.justifyItems = "end";
-  right.style.gap = "8px";
+  const bountyTag = document.createElement("div");
+  bountyTag.className = "bounty-tag";
+  const bountyAmt = document.createElement("div");
+  bountyAmt.className = "bounty-amount";
+  bountyAmt.textContent = lamportsToSol(Number(task.bountyLamports || 0)).toFixed(3);
+  const bountyUnit = document.createElement("div");
+  bountyUnit.className = "bounty-unit";
+  bountyUnit.textContent = "SOL";
+  bountyTag.appendChild(bountyAmt);
+  bountyTag.appendChild(bountyUnit);
 
-  const bounty = document.createElement("div");
-  bounty.className = "bounty";
-  bounty.textContent = `${fmtSol(Number(task.bountyLamports || 0))}  (${fmtLamports(Number(task.bountyLamports || 0))})`;
+  header.appendChild(questionEl);
+  header.appendChild(bountyTag);
+  root.appendChild(header);
 
-  const status = document.createElement("span");
-  status.className = "pill";
-  status.classList.add(task.status === "OPEN" ? "ok" : "bad");
-  status.textContent = task.status;
+  // Context
+  if (task.context) {
+    const ctx = document.createElement("div");
+    ctx.className = "detail-context";
+    ctx.textContent = task.context;
+    root.appendChild(ctx);
+  }
 
-  right.appendChild(bounty);
-  right.appendChild(status);
+  // Status pill
+  const pillWrap = document.createElement("div");
+  pillWrap.style.marginBottom = "20px";
+  const pill = document.createElement("span");
+  pill.className = `status-pill ${statusPillClass(task.status)}`;
+  pill.textContent = statusLabel(task.status);
+  pillWrap.appendChild(pill);
+  root.appendChild(pillWrap);
 
-  th.appendChild(left);
-  th.appendChild(right);
+  // Images
+  if ((task.imageUrls || []).length) {
+    const imgs = document.createElement("div");
+    imgs.className = "detail-images";
+    (task.imageUrls || []).slice(0, 2).forEach((u, idx) => {
+      const img = document.createElement("img");
+      img.src = u;
+      img.alt = `Landing page ${idx === 0 ? "A" : "B"}`;
+      img.onclick = () => openModal(`Page ${idx === 0 ? "A" : "B"}`, u);
+      imgs.appendChild(img);
+    });
+    root.appendChild(imgs);
+  }
 
-  header.appendChild(th);
-
-  const imgs = document.createElement("div");
-  imgs.className = "imgs";
-  (task.imageUrls || []).slice(0, 2).forEach((u, idx) => {
-    const img = document.createElement("img");
-    img.src = u;
-    img.alt = `context ${idx === 0 ? "A" : "B"}`;
-    img.onclick = () => openModal(`Image ${idx === 0 ? "A" : "B"}`, u);
-    imgs.appendChild(img);
-  });
-  if ((task.imageUrls || []).length) header.appendChild(imgs);
-
-  // Answer box for OPEN tasks
+  // Answer zone for OPEN tasks
   if (task.status === "OPEN") {
-    const row = document.createElement("div");
-    row.className = "answerRow";
+    const zone = document.createElement("div");
+    zone.className = "answer-zone";
+
+    const label = document.createElement("div");
+    label.className = "answer-label";
+    label.textContent = "Your Answer";
+    zone.appendChild(label);
+
     const ta = document.createElement("textarea");
     ta.id = "answerDraft";
+    ta.className = "answer-textarea";
     ta.placeholder = "Answer briefly. Explain the tradeoff.";
     ta.value = State.draftsByTaskId[task.id] || "";
     ta.addEventListener("input", () => {
       State.draftsByTaskId[task.id] = ta.value || "";
     });
+    zone.appendChild(ta);
+
+    const actions = document.createElement("div");
+    actions.className = "answer-actions";
     const btn = document.createElement("button");
-    btn.className = "btn";
+    btn.className = "btn-submit";
     btn.textContent = "Submit Answer";
 
     btn.onclick = async () => {
@@ -372,7 +474,6 @@ function renderDetail() {
           toast("Submit failed", String(resp.error));
           pushActivity("error", "Answer submit failed", String(resp.error));
         } else {
-          // Clear draft on success so it doesn't linger if we switch back to this task.
           State.draftsByTaskId[task.id] = "";
           toast("Answer submitted", `Task ${short(task.id, 5)} is now ANSWERED`);
           pushActivity("answer", "Answer submitted", `task=${short(task.id, 5)}`);
@@ -384,66 +485,89 @@ function renderDetail() {
       }
     };
 
-    row.appendChild(ta);
-    row.appendChild(btn);
-    header.appendChild(row);
+    actions.appendChild(btn);
+    zone.appendChild(actions);
+    root.appendChild(zone);
   } else if (task.status === "ANSWERED") {
-    const note = document.createElement("div");
-    note.className = "emptyState";
-    note.textContent = "Answer submitted. Waiting for agent to confirm and release payment...";
-    header.appendChild(note);
+    const msg = document.createElement("div");
+    msg.className = "waiting-msg";
+    msg.textContent = "Waiting for agent to confirm and release payment...";
+    root.appendChild(msg);
   }
 
-  root.appendChild(header);
+  // Metadata
+  const metaSection = document.createElement("div");
+  metaSection.className = "detail-meta";
 
-  // Key/value metadata
-  const meta = document.createElement("div");
-  meta.style.marginTop = "14px";
-  meta.className = "task";
+  const metaTitle = document.createElement("div");
+  metaTitle.className = "meta-title";
+  metaTitle.textContent = "Metadata";
+  metaSection.appendChild(metaTitle);
 
-  meta.appendChild(kv("Task ID", textNode(task.id)));
-  meta.appendChild(kv("Agent", textNode(short(task.agentPubkey || "", 8))));
-  meta.appendChild(kv("Resolver", textNode(task.resolverPubkey ? short(task.resolverPubkey, 8) : "(not set)")));
+  const grid = document.createElement("div");
+  grid.className = "kv-grid";
 
-  if (task.lockTxSig) meta.appendChild(kv("Lock tx", linkTx(task.lockTxSig)));
-  else meta.appendChild(kv("Lock tx", textNode("(none)")));
+  grid.appendChild(kvRow("Task ID", textNode(task.id)));
+  grid.appendChild(kvRow("Agent", textNode(short(task.agentPubkey || "", 8))));
+  grid.appendChild(kvRow("Resolver", textNode(task.resolverPubkey ? short(task.resolverPubkey, 8) : "(not set)")));
+  grid.appendChild(kvRow("Lock tx", task.lockTxSig ? linkTx(task.lockTxSig) : textNode("(none)")));
+  if (task.releaseTxSig) grid.appendChild(kvRow("Release tx", linkTx(task.releaseTxSig)));
+  if (task.refundTxSig) grid.appendChild(kvRow("Refund tx", linkTx(task.refundTxSig)));
 
-  if (task.releaseTxSig) meta.appendChild(kv("Release tx", linkTx(task.releaseTxSig)));
-  if (task.refundTxSig) meta.appendChild(kv("Refund tx", linkTx(task.refundTxSig)));
-
-  root.appendChild(meta);
+  metaSection.appendChild(grid);
+  root.appendChild(metaSection);
 }
+
+// ── Render: Activity ────────────────────────────────
 
 function renderActivity() {
   const root = $("activity");
   root.innerHTML = "";
   if (!State.activity.length) {
     const empty = document.createElement("div");
-    empty.className = "emptyState";
-    empty.textContent = "No activity yet. When the agent posts a task, events appear here.";
+    empty.className = "empty-state";
+    empty.style.height = "120px";
+    empty.textContent = "No activity yet.";
     root.appendChild(empty);
     return;
   }
 
   for (const e of State.activity) {
     const el = document.createElement("div");
-    el.className = "event";
+    el.className = "event-item";
+
     const top = document.createElement("div");
-    top.className = "eventTop";
-    const l = document.createElement("div");
-    l.textContent = e.kind.toUpperCase();
-    const r = document.createElement("div");
-    r.textContent = fmtAgo(nowMs() - e.ts);
-    top.appendChild(l);
-    top.appendChild(r);
-    const msg = document.createElement("div");
-    msg.className = "eventMsg";
-    msg.textContent = e.msg + (e.meta ? ` (${e.meta})` : "");
+    top.className = "event-top";
+
+    const kind = document.createElement("span");
+    kind.className = "event-kind";
+    kind.textContent = e.kind.toUpperCase();
+
+    const time = document.createElement("span");
+    time.className = "event-time";
+    time.textContent = fmtAgo(nowMs() - e.ts);
+
+    top.appendChild(kind);
+    top.appendChild(time);
     el.appendChild(top);
+
+    const msg = document.createElement("div");
+    msg.className = "event-msg";
+    msg.textContent = e.msg;
     el.appendChild(msg);
+
+    if (e.meta) {
+      const meta = document.createElement("div");
+      meta.className = "event-meta";
+      meta.textContent = e.meta;
+      el.appendChild(meta);
+    }
+
     root.appendChild(el);
   }
 }
+
+// ── Connection ──────────────────────────────────────
 
 function setConn(ok, text) {
   $("statusText").textContent = text;
@@ -485,7 +609,6 @@ function beep() {
 
 async function refresh() {
   try {
-    // Preserve in-progress typing across polling/WS refreshes.
     saveDraftFromDom();
 
     const data = await API.listTasks();
@@ -494,10 +617,8 @@ async function refresh() {
 
     renderStats();
     renderTaskList();
-    // Avoid destroying the textarea while the user is typing.
     if (!isTypingAnswer()) renderDetail();
 
-    // New task detection (for sound/toast)
     const newOnes = State.tasks.filter((t) => !prevIds.has(t.id));
     if (newOnes.length) {
       const s = getSettings();
@@ -537,6 +658,8 @@ function connectWs() {
   };
 }
 
+// ── Boot ────────────────────────────────────────────
+
 function boot() {
   // Tabs
   for (const id of ["tabOpen", "tabAnswered", "tabPaid", "tabAll"]) {
@@ -552,9 +675,19 @@ function boot() {
   $("refreshBtn").onclick = refresh;
   $("settingsBtn").onclick = openSettings;
 
+  // Activity drawer
+  $("activityBtn").onclick = openDrawer;
+  $("activityClose").onclick = closeDrawer;
+  $("drawerBackdrop").onclick = closeDrawer;
+
+  // Mobile rail toggle
+  $("railToggle").onclick = toggleRail;
+
+  // Image modal
   $("modalClose").onclick = closeModal;
   $("modalBackdrop").onclick = closeModal;
 
+  // Settings modal
   $("settingsClose").onclick = closeSettings;
   $("settingsBackdrop").onclick = closeSettings;
 
