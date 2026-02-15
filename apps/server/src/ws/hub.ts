@@ -4,7 +4,10 @@ import { WebSocketServer } from "ws";
 
 export type WsEvent =
   | { type: "task.created"; taskId: string }
-  | { type: "task.updated"; taskId: string; status: TaskStatus };
+  | { type: "task.updated"; taskId: string; status: TaskStatus }
+  | { type: "agent.registered"; agentId: string; role: string }
+  | { type: "trust.updated"; agentId: string; score: number }
+  | { type: "pubsub"; topic: string; payload: Record<string, unknown> };
 
 export class WsHub {
   private wss: WebSocketServer;

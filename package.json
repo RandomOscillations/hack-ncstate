@@ -11,6 +11,9 @@
     "dev:server": "npm -w apps/server run dev",
     "predev:agent": "npm -w @unblock/common run build",
     "dev:agent": "npm -w apps/agent run dev",
+    "dev:publisher": "npm -w @unblock/common run build && cross-env AGENT_MODE=publisher npm -w apps/agent run dev",
+    "dev:subscriber": "npm -w @unblock/common run build && cross-env AGENT_MODE=subscriber npm -w apps/agent run dev",
+    "dev:supervisor": "npm -w @unblock/common run build && cross-env AGENT_MODE=supervisor npm -w apps/agent run dev",
     "test": "npm run typecheck && npm run build",
     "build": "npm -w packages/common run build && npm -w apps/server run build && npm -w apps/agent run build",
     "typecheck": "npm -w packages/common run typecheck && npm -w apps/server run typecheck && npm -w apps/agent run typecheck",
@@ -20,6 +23,7 @@
   },
   "devDependencies": {
     "concurrently": "^9.0.0",
+    "cross-env": "^10.1.0",
     "tsx": "^4.19.0",
     "typescript": "^5.6.3"
   }

@@ -3,6 +3,8 @@ import { loadEnv } from "./env";
 import { ServerApi } from "./api";
 import { runReasoningProbe, runStep1, runStep2, runAmbiguityCheck, runFinalStep } from "./llm";
 import { sendLockTransaction } from "./solana";
+import { subscriberMain } from "./subscriber";
+import { supervisorMain } from "./supervisor";
 
 function log(msg: string) {
   console.log(`[agent] ${msg}`);
@@ -35,6 +37,14 @@ async function main() {
         `Start it with: MOCK_SOLANA=1 RESOLVER_DEMO_TOKEN=demo-token npm run dev:server`
     );
   }
+
+  // Register as publisher
+  const reg = await api.registerAgent({
+    name: env.agentName || "publisher-1",
+    role: "publisher",
+    pubkey: env.agentPubkey,
+  });
+  log(`Registered as publisher: ${reg.agentId} (trust: ${reg.trustScore})`);
 
   // Optional: explicit LLM reasoning probe (for testing that "real LLM" is wired correctly).
   if (env.reasoningTest) {
@@ -86,6 +96,7 @@ async function main() {
     agentPubkey: env.agentPubkey,
     lockTxSig,
     expiresInSec: 600,
+    publisherAgentId: reg.agentId,
   };
 
   const created = await api.createTask(payload);
@@ -111,7 +122,22 @@ async function main() {
       break;
     }
 
-    if (task.status !== "OPEN") {
+    if (task.status === "VERIFIED_PAID") {
+      answered = true;
+      answerText = task.fulfillment?.fulfillmentText || task.answerText || "";
+      console.log();
+      log(`Task verified and paid via protocol flow!`);
+      log(`Answer: "${answerText}"`);
+      break;
+    }
+
+    if (task.status === "DISPUTED") {
+      console.log();
+      log(`Task was disputed — may be re-published.`);
+      return;
+    }
+
+    if (task.status !== "OPEN" && task.status !== "CLAIMED" && task.status !== "FULFILLED" && task.status !== "SCORED" && task.status !== "UNDER_REVIEW") {
       console.log();
       log(`Unexpected status: ${task.status} - aborting.`);
       return;
@@ -149,7 +175,23 @@ async function main() {
   log("Done. Agent workflow complete.");
 }
 
-main().catch((e) => {
-  console.error("[agent] fatal:", e);
-  process.exit(1);
-});
+// Route by AGENT_MODE
+const env = loadEnv();
+const mode = env.agentMode;
+
+if (mode === "subscriber") {
+  subscriberMain().catch((e) => {
+    console.error("[subscriber] fatal:", e);
+    process.exit(1);
+  });
+} else if (mode === "supervisor") {
+  supervisorMain().catch((e) => {
+    console.error("[supervisor] fatal:", e);
+    process.exit(1);
+  });
+} else {
+  main().catch((e) => {
+    console.error("[agent] fatal:", e);
+    process.exit(1);
+  });
+}

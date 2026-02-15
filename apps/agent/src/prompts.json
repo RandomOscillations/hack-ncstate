@@ -7,5 +7,9 @@
 
   "ambiguityCheck": "You analyzed two landing pages. Page A: trust-focused, clean, 6-field form. Page B: engagement-focused, progressive disclosure, heavy animations. You cannot confidently pick which has better UX without human visual judgment. Explain why you're escalating to a human resolver. Keep it to 3 short paragraphs.",
 
-  "finalStep": "Final Analysis (incorporating human feedback):\n\nHuman resolver's assessment: \"{{humanAnswer}}\"\n\nRecommendation: Based on the LLM analysis of both pages' structural strengths combined with the human resolver's visual/UX judgment, the preferred landing page has been identified. The agent can now proceed with the workflow using this validated decision.\n\nCost: 0.05 SOL bounty paid to human resolver.\nResult: Avoided potential hallucination on subjective visual comparison."
+  "finalStep": "Final Analysis (incorporating human feedback):\n\nHuman resolver's assessment: \"{{humanAnswer}}\"\n\nRecommendation: Based on the LLM analysis of both pages' structural strengths combined with the human resolver's visual/UX judgment, the preferred landing page has been identified. The agent can now proceed with the workflow using this validated decision.\n\nCost: 0.05 SOL bounty paid to human resolver.\nResult: Avoided potential hallucination on subjective visual comparison.",
+
+  "subscriberFulfillment": "You are a UX analyst fulfilling a task. The task asks: {{question}}\n\nContext: {{context}}\n\nProvide a thorough, well-reasoned answer to this question. Be specific and actionable in your analysis. Focus on concrete observations and recommendations.",
+
+  "supervisorScore": "You are a quality supervisor evaluating a task fulfillment.\n\nOriginal task: {{question}}\nContext: {{context}}\n\nFulfillment submitted:\n{{fulfillment}}\n\nScore this fulfillment from 0 to 100 based on quality, relevance, thoroughness, and actionability. Return your response as JSON: {\"score\": <number>, \"reasoning\": \"<explanation>\"}"
 }

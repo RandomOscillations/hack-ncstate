@@ -26,6 +26,7 @@
           <span class="conn-label" id="statusText">Starting...</span>
         </div>
         <button class="btn-icon" id="activityBtn" title="Activity feed">&#9881;</button>
+        <button class="btn-secondary" id="agentsBtn">Agents</button>
         <button class="btn-secondary" id="refreshBtn">Refresh</button>
         <button class="btn-secondary" id="settingsBtn">Settings</button>
       </div>
@@ -40,6 +41,7 @@
           <button class="tab" id="tabAnswered" data-filter="answered">Answered</button>
           <button class="tab" id="tabPaid" data-filter="paid">Paid</button>
           <button class="tab" id="tabAll" data-filter="all">All</button>
+          <button class="tab" id="tabReview" data-filter="review">Review</button>
         </div>
         <div class="search-box">
           <input id="search" class="search-input" placeholder="Search tasks..." />
@@ -48,6 +50,7 @@
       </aside>
 
       <main class="detail-area" id="detail"></main>
+      <div class="agent-pool" id="agentPool" style="display:none"></div>
     </div>
 
     <!-- Activity Drawer -->

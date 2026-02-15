@@ -7,6 +7,14 @@ export type ServerEnv = {
   solanaRpcUrl: string;
   escrowKeypairPath: string;
   webPublicDir: string;
+  supervisorScoreThreshold: number;
+  subscriberPaymentShare: number;
+  verifierPaymentShare: number;
+  // Tier system
+  auditSampleRate: number;
+  autoApproveSubscriberMinTrust: number;
+  subscriberMinClaimTrust: number;
+  calibrationScoreTolerance: number;
 };
 
 export function loadEnv(): ServerEnv {
@@ -20,6 +28,28 @@ export function loadEnv(): ServerEnv {
   // When running `npm -w apps/server run dev`, cwd is `apps/server`.
   const webPublicDir = process.env.WEB_PUBLIC_DIR || path.resolve(process.cwd(), "../web/public");
 
-  return { port, resolverDemoToken, mockSolana, solanaRpcUrl, escrowKeypairPath, webPublicDir };
-}
+  const supervisorScoreThreshold = Number(process.env.SUPERVISOR_SCORE_THRESHOLD || "60");
+  const subscriberPaymentShare = Number(process.env.SUBSCRIBER_PAYMENT_SHARE || "0.7");
+  const verifierPaymentShare = Number(process.env.VERIFIER_PAYMENT_SHARE || "0.3");
 
+  const auditSampleRate = Number(process.env.AUDIT_SAMPLE_RATE || "0.20");
+  const autoApproveSubscriberMinTrust = Number(process.env.AUTO_APPROVE_SUBSCRIBER_MIN_TRUST || "40");
+  const subscriberMinClaimTrust = Number(process.env.SUBSCRIBER_MIN_CLAIM_TRUST || "10");
+  const calibrationScoreTolerance = Number(process.env.CALIBRATION_SCORE_TOLERANCE || "15");
+
+  return {
+    port,
+    resolverDemoToken,
+    mockSolana,
+    solanaRpcUrl,
+    escrowKeypairPath,
+    webPublicDir,
+    supervisorScoreThreshold,
+    subscriberPaymentShare,
+    verifierPaymentShare,
+    auditSampleRate,
+    autoApproveSubscriberMinTrust,
+    subscriberMinClaimTrust,
+    calibrationScoreTolerance,
+  };
+}

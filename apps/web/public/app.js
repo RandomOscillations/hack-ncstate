@@ -24,6 +24,22 @@ const API = {
     });
     return res.json();
   },
+  async listAgents() {
+    const res = await fetch("/api/agents");
+    return res.json();
+  },
+  async getTrust() {
+    const res = await fetch("/api/trust");
+    return res.json();
+  },
+  async submitVerification(taskId, body) {
+    const res = await fetch(`/api/tasks/${taskId}/verify`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return res.json();
+  },
 };
 
 const State = {
@@ -34,8 +50,16 @@ const State = {
   activity: [],
   wsConnected: false,
   draftsByTaskId: {},
-  prevStats: { open: 0, answered: 0, paid: 0, refunded: 0 },
+  prevStats: { open: 0, answered: 0, paid: 0, refunded: 0, claimed: 0, fulfilled: 0, review: 0, verified: 0, disputed: 0 },
+  agents: [],
+  trustScores: [],
+  view: "tasks",
 };
+
+// ── Incremental rendering refs (avoid full DOM rebuilds) ─
+const _statRefs = [];
+const _taskElements = new Map();
+let _detailFingerprint = "";
 
 function nowMs() {
   return Date.now();
@@ -171,17 +195,21 @@ function toggleRail() {
 // ── Status Pill Helper ──────────────────────────────
 
 function statusPillClass(status) {
-  if (status === "OPEN") return "open";
-  if (status === "ANSWERED") return "answered";
-  if (status === "CONFIRMED_PAID") return "paid";
-  return "refunded";
+  const map = {
+    OPEN: "open", CLAIMED: "claimed", FULFILLED: "fulfilled",
+    SCORED: "scored", UNDER_REVIEW: "review", VERIFIED_PAID: "paid",
+    DISPUTED: "disputed", EXPIRED_REFUNDED: "refunded",
+    ANSWERED: "answered", CONFIRMED_PAID: "paid", REJECTED_REFUNDED: "refunded"
+  };
+  return map[status] || "open";
 }
 
 function statusLabel(status) {
-  if (status === "CONFIRMED_PAID") return "PAID";
-  if (status === "REJECTED_REFUNDED") return "REFUNDED";
-  if (status === "EXPIRED_REFUNDED") return "EXPIRED";
-  return status;
+  const map = {
+    CONFIRMED_PAID: "PAID", REJECTED_REFUNDED: "REFUNDED", EXPIRED_REFUNDED: "EXPIRED",
+    UNDER_REVIEW: "REVIEW", VERIFIED_PAID: "VERIFIED"
+  };
+  return map[status] || status;
 }
 
 // ── Render: Stats Ticker ────────────────────────────
@@ -189,48 +217,73 @@ function statusLabel(status) {
 function renderStats() {
   const tasks = State.tasks;
   const open = tasks.filter((t) => t.status === "OPEN").length;
+  const claimed = tasks.filter((t) => t.status === "CLAIMED").length;
+  const fulfilled = tasks.filter((t) => t.status === "FULFILLED").length;
+  const review = tasks.filter((t) => t.status === "SCORED" || t.status === "UNDER_REVIEW").length;
+  const verified = tasks.filter((t) => t.status === "VERIFIED_PAID" || t.status === "CONFIRMED_PAID").length;
+  const disputed = tasks.filter((t) => t.status === "DISPUTED").length;
+
+  // Legacy counts for backward compat
   const answered = tasks.filter((t) => t.status === "ANSWERED").length;
-  const paid = tasks.filter((t) => t.status === "CONFIRMED_PAID").length;
-  const refunded = tasks.filter((t) => t.status === "REJECTED_REFUNDED" || t.status === "EXPIRED_REFUNDED").length;
 
   const totalLamports = tasks
-    .filter((t) => t.status === "CONFIRMED_PAID")
+    .filter((t) => t.status === "CONFIRMED_PAID" || t.status === "VERIFIED_PAID")
     .reduce((acc, t) => acc + Number(t.bountyLamports || 0), 0);
 
   const stats = [
-    { label: "Open", value: open, sub: "Awaiting resolver", key: "open" },
-    { label: "Answered", value: answered, sub: "Awaiting confirm", key: "answered" },
-    { label: "Paid", value: paid, sub: fmtSol(totalLamports), key: "paid" },
-    { label: "Refunded", value: refunded, sub: "Rejected / expired", key: "refunded" },
+    { label: "Open", value: open + answered, sub: "Awaiting work", key: "open" },
+    { label: "Claimed", value: claimed, sub: "In progress", key: "claimed" },
+    { label: "Fulfilled", value: fulfilled, sub: "Awaiting score", key: "fulfilled" },
+    { label: "Review", value: review, sub: "Needs verifier", key: "review" },
+    { label: "Verified", value: verified, sub: fmtSol(totalLamports), key: "verified" },
+    { label: "Disputed", value: disputed, sub: "Under dispute", key: "disputed" },
   ];
 
   const root = $("stats");
-  root.innerHTML = "";
-  for (const s of stats) {
-    const el = document.createElement("div");
-    el.className = "stat-cell";
 
-    const numEl = document.createElement("div");
-    numEl.className = "stat-number";
-    numEl.textContent = String(s.value);
+  // First render: build DOM skeleton
+  if (_statRefs.length === 0) {
+    root.innerHTML = "";
+    for (const s of stats) {
+      const el = document.createElement("div");
+      el.className = "stat-cell";
 
-    // Flash if value changed
-    if (State.prevStats[s.key] !== undefined && State.prevStats[s.key] !== s.value) {
-      numEl.classList.add("flash");
-      setTimeout(() => numEl.classList.remove("flash"), 600);
+      const labelEl = document.createElement("div");
+      labelEl.className = "stat-label";
+      labelEl.textContent = s.label;
+
+      const numEl = document.createElement("div");
+      numEl.className = "stat-number";
+      numEl.textContent = String(s.value);
+
+      const subEl = document.createElement("div");
+      subEl.className = "stat-sub";
+      subEl.textContent = s.sub;
+
+      el.appendChild(labelEl);
+      el.appendChild(numEl);
+      el.appendChild(subEl);
+      root.appendChild(el);
+      _statRefs.push({ numEl, subEl, key: s.key });
     }
-
-    el.innerHTML = `<div class="stat-label"></div>`;
-    el.querySelector(".stat-label").textContent = s.label;
-    el.appendChild(numEl);
-    const sub = document.createElement("div");
-    sub.className = "stat-sub";
-    sub.textContent = s.sub;
-    el.appendChild(sub);
-    root.appendChild(el);
+  } else {
+    // Subsequent renders: update values in place
+    for (let i = 0; i < stats.length; i++) {
+      const s = stats[i];
+      const ref = _statRefs[i];
+      const prev = State.prevStats[s.key];
+      if (prev !== undefined && prev !== s.value) {
+        ref.numEl.textContent = String(s.value);
+        ref.numEl.classList.add("flash");
+        setTimeout(() => ref.numEl.classList.remove("flash"), 600);
+      } else if (ref.numEl.textContent !== String(s.value)) {
+        ref.numEl.textContent = String(s.value);
+      }
+      ref.subEl.textContent = s.sub;
+    }
   }
 
-  State.prevStats = { open, answered, paid, refunded };
+  State.prevStats = { open: open + answered, claimed, fulfilled, review, verified, disputed };
 }
 
 // ── Render: Task List ───────────────────────────────
@@ -246,88 +299,126 @@ function filteredTasks() {
     if (State.filter === "all") return true;
     if (State.filter === "open") return t.status === "OPEN";
     if (State.filter === "answered") return t.status === "ANSWERED";
-    if (State.filter === "paid") return t.status === "CONFIRMED_PAID";
+    if (State.filter === "paid") return t.status === "CONFIRMED_PAID" || t.status === "VERIFIED_PAID";
+    if (State.filter === "review") return t.status === "SCORED" || t.status === "UNDER_REVIEW";
     return true;
   };
 
   return State.tasks.filter((t) => byFilter(t) && matchesQuery(t));
 }
 
+function createTaskItemEl(t) {
+  const el = document.createElement("div");
+
+  const titleEl = document.createElement("div");
+  titleEl.className = "task-item-title";
+
+  const meta = document.createElement("div");
+  meta.className = "task-item-meta";
+
+  const bountyEl = document.createElement("span");
+  bountyEl.className = "task-item-bounty";
+
+  const timeEl = document.createElement("span");
+  timeEl.className = "task-item-time";
+
+  meta.appendChild(bountyEl);
+  meta.appendChild(timeEl);
+
+  const bottom = document.createElement("div");
+  bottom.className = "task-item-bottom";
+
+  const pillEl = document.createElement("span");
+  pillEl.className = "status-pill";
+
+  const idEl = document.createElement("span");
+  idEl.className = "task-item-id";
+
+  bottom.appendChild(pillEl);
+  bottom.appendChild(idEl);
+
+  el.appendChild(titleEl);
+  el.appendChild(meta);
+  el.appendChild(bottom);
+
+  const taskId = t.id;
+  el.onclick = () => {
+    State.selectedTaskId = taskId;
+    renderTaskList();
+    renderDetail();
+    if (window.innerWidth <= 1024) $("taskRail").classList.remove("open");
+  };
+
+  const refs = { el, titleEl, bountyEl, timeEl, pillEl, idEl };
+  _taskElements.set(taskId, refs);
+  return refs;
+}
+
+function syncTaskItem(refs, t) {
+  refs.el.className = `task-item status-${t.status}${t.id === State.selectedTaskId ? " selected" : ""}`;
+  refs.titleEl.textContent = t.question || "(no question)";
+  refs.bountyEl.textContent = fmtSol(Number(t.bountyLamports || 0));
+  refs.timeEl.textContent = fmtAgo(nowMs() - Number(t.createdAtMs || nowMs()));
+  refs.pillEl.className = `status-pill ${statusPillClass(t.status)}`;
+  refs.pillEl.textContent = statusLabel(t.status);
+  refs.idEl.textContent = short(t.id, 5);
+}
+
 function renderTaskList() {
   const root = $("taskList");
   const tasks = filteredTasks();
-  root.innerHTML = "";
 
   if (!tasks.length) {
-    const empty = document.createElement("div");
-    empty.className = "empty-state";
-    empty.style.margin = "16px";
-    empty.style.height = "200px";
-    empty.innerHTML = `<div class="empty-state-icon">&#9744;</div>`;
-    const msg = document.createElement("div");
-    msg.textContent = State.filter === "open"
-      ? "No open tasks yet. Run the agent to create one."
-      : "No tasks for this filter.";
-    empty.appendChild(msg);
-    root.appendChild(empty);
+    // Remove all tracked elements
+    for (const [, refs] of _taskElements) refs.el.remove();
+    _taskElements.clear();
+    // Show empty state if not already present
+    if (!root.querySelector(".empty-state")) {
+      root.innerHTML = "";
+      const empty = document.createElement("div");
+      empty.className = "empty-state";
+      empty.style.margin = "16px";
+      empty.style.height = "200px";
+      empty.innerHTML = `<div class="empty-state-icon">&#9744;</div>`;
+      const msg = document.createElement("div");
+      msg.textContent = State.filter === "open"
+        ? "No open tasks yet. Run the agent to create one."
+        : "No tasks for this filter.";
+      empty.appendChild(msg);
+      root.appendChild(empty);
+    }
     return;
   }
+
+  // Remove empty state if present
+  const emptyEl = root.querySelector(".empty-state");
+  if (emptyEl) emptyEl.remove();
 
   // Keep selection stable
   if (!State.selectedTaskId || !tasks.some((t) => t.id === State.selectedTaskId)) {
     State.selectedTaskId = tasks[0].id;
   }
 
-  for (const t of tasks) {
-    const item = document.createElement("div");
-    item.className = `task-item status-${t.status}`;
-    if (t.id === State.selectedTaskId) item.classList.add("selected");
+  const visibleIds = new Set(tasks.map((t) => t.id));
 
-    const title = document.createElement("div");
-    title.className = "task-item-title";
-    title.textContent = t.question || "(no question)";
+  // Remove elements for tasks no longer in the filtered view
+  for (const [id, refs] of _taskElements) {
+    if (!visibleIds.has(id)) {
+      refs.el.remove();
+      _taskElements.delete(id);
+    }
+  }
 
-    const meta = document.createElement("div");
-    meta.className = "task-item-meta";
-
-    const bounty = document.createElement("span");
-    bounty.className = "task-item-bounty";
-    bounty.textContent = fmtSol(Number(t.bountyLamports || 0));
-
-    const time = document.createElement("span");
-    time.className = "task-item-time";
-    time.textContent = fmtAgo(nowMs() - Number(t.createdAtMs || nowMs()));
-
-    meta.appendChild(bounty);
-    meta.appendChild(time);
-
-    const bottom = document.createElement("div");
-    bottom.className = "task-item-bottom";
-
-    const pill = document.createElement("span");
-    pill.className = `status-pill ${statusPillClass(t.status)}`;
-    pill.textContent = statusLabel(t.status);
-
-    const id = document.createElement("span");
-    id.className = "task-item-id";
-    id.textContent = short(t.id, 5);
-
-    bottom.appendChild(pill);
-    bottom.appendChild(id);
-
-    item.appendChild(title);
-    item.appendChild(meta);
-    item.appendChild(bottom);
-
-    item.onclick = () => {
-      State.selectedTaskId = t.id;
-      renderTaskList();
-      renderDetail();
-      // Close rail on mobile after selecting
-      if (window.innerWidth <= 1024) $("taskRail").classList.remove("open");
-    };
-
-    root.appendChild(item);
+  // Add/update elements in correct order
+  for (let i = 0; i < tasks.length; i++) {
+    const t = tasks[i];
+    let refs = _taskElements.get(t.id);
+    if (!refs) refs = createTaskItemEl(t);
+    syncTaskItem(refs, t);
+    // Ensure correct DOM position
+    if (root.children[i] !== refs.el) {
+      root.insertBefore(refs.el, root.children[i] || null);
+    }
   }
 }
 
@@ -362,9 +453,26 @@ function textNode(s) {
   return span;
 }
 
+function getTaskFingerprint(task) {
+  if (!task) return "null";
+  return [
+    task.id, task.status, task.bountyLamports,
+    task.resolverPubkey || "", task.lockTxSig || "",
+    task.releaseTxSig || "", task.refundTxSig || "",
+    task.supervisorScore ?? "", task.supervisorReasoning || "",
+    task.fulfillment ? task.fulfillment.fulfillmentText : "",
+  ].join("|");
+}
+
 function renderDetail() {
   const root = $("detail");
   const task = State.tasks.find((t) => t.id === State.selectedTaskId);
+
+  // Skip rebuild if nothing changed
+  const fp = getTaskFingerprint(task);
+  if (fp === _detailFingerprint) return;
+  _detailFingerprint = fp;
+
   if (!task) {
     root.innerHTML = "";
     const empty = document.createElement("div");
@@ -414,6 +522,12 @@ function renderDetail() {
   pill.className = `status-pill ${statusPillClass(task.status)}`;
   pill.textContent = statusLabel(task.status);
   pillWrap.appendChild(pill);
+  if (task.autoApproved) {
+    const autoBadge = document.createElement("span");
+    autoBadge.style.cssText = "display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;color:#fff;background:var(--status-paid)";
+    autoBadge.textContent = "Auto-Approved";
+    pillWrap.appendChild(autoBadge);
+  }
   root.appendChild(pillWrap);
 
   // Images
@@ -495,6 +609,194 @@ function renderDetail() {
     root.appendChild(msg);
   }
 
+  // Fulfillment card for tasks that have fulfillment data
+  if (task.fulfillment) {
+    const card = document.createElement("div");
+    card.className = "fulfillment-card";
+    const lbl = document.createElement("div");
+    lbl.className = "label";
+    lbl.textContent = "Fulfillment" + (task.fulfillment.subscriberPubkey ? " by " + short(task.fulfillment.subscriberPubkey, 6) : "");
+    card.appendChild(lbl);
+    const txt = document.createElement("div");
+    txt.className = "text";
+    txt.textContent = task.fulfillment.fulfillmentText || "";
+    card.appendChild(txt);
+    root.appendChild(card);
+  }
+
+  // Supervisor score bar for SCORED / UNDER_REVIEW / VERIFIED_PAID / DISPUTED
+  if (task.supervisorScore !== undefined && task.supervisorScore !== null) {
+    const container = document.createElement("div");
+    container.className = "score-bar-container";
+
+    const labelRow = document.createElement("div");
+    labelRow.className = "score-bar-label";
+
+    const scoreLbl = document.createElement("span");
+    scoreLbl.style.fontFamily = "var(--font-body)";
+    scoreLbl.style.fontSize = "var(--text-sm)";
+    scoreLbl.style.fontWeight = "600";
+    scoreLbl.textContent = "Supervisor Score";
+
+    const scoreVal = document.createElement("span");
+    scoreVal.style.fontFamily = "var(--font-mono)";
+    scoreVal.style.fontWeight = "700";
+    const sv = Number(task.supervisorScore);
+    scoreVal.textContent = sv + " / 100";
+
+    const passBadge = document.createElement("span");
+    passBadge.className = "status-pill " + (sv >= 50 ? "paid" : "refunded");
+    passBadge.textContent = sv >= 50 ? "PASS" : "FAIL";
+    passBadge.style.marginLeft = "8px";
+
+    labelRow.appendChild(scoreLbl);
+    const rightSide = document.createElement("span");
+    rightSide.appendChild(scoreVal);
+    rightSide.appendChild(passBadge);
+    labelRow.appendChild(rightSide);
+    container.appendChild(labelRow);
+
+    const bar = document.createElement("div");
+    bar.className = "score-bar";
+    const fill = document.createElement("div");
+    fill.className = "score-bar-fill " + (sv >= 70 ? "high" : sv >= 40 ? "medium" : "low");
+    fill.style.width = sv + "%";
+    bar.appendChild(fill);
+    container.appendChild(bar);
+
+    if (task.supervisorReasoning) {
+      const reason = document.createElement("div");
+      reason.style.marginTop = "8px";
+      reason.style.fontSize = "var(--text-sm)";
+      reason.style.color = "var(--text-secondary)";
+      reason.style.lineHeight = "1.5";
+      reason.textContent = task.supervisorReasoning;
+      container.appendChild(reason);
+    }
+
+    root.appendChild(container);
+  }
+
+  // Verification form for UNDER_REVIEW tasks
+  if (task.status === "UNDER_REVIEW") {
+    const form = document.createElement("div");
+    form.className = "verification-form";
+
+    const heading = document.createElement("h3");
+    heading.textContent = "Submit Verification";
+    form.appendChild(heading);
+
+    // Score slider
+    const scoreGroup = document.createElement("div");
+    scoreGroup.className = "form-group";
+    const scoreLabelEl = document.createElement("label");
+    scoreLabelEl.textContent = "Ground Truth Score";
+    scoreGroup.appendChild(scoreLabelEl);
+
+    const scoreDisplay = document.createElement("div");
+    scoreDisplay.className = "score-display";
+    scoreDisplay.textContent = "50";
+    scoreGroup.appendChild(scoreDisplay);
+
+    const slider = document.createElement("input");
+    slider.type = "range";
+    slider.min = "0";
+    slider.max = "100";
+    slider.value = "50";
+    slider.addEventListener("input", () => {
+      scoreDisplay.textContent = slider.value;
+    });
+    scoreGroup.appendChild(slider);
+    form.appendChild(scoreGroup);
+
+    // Agree/Disagree toggle
+    const agreeGroup = document.createElement("div");
+    agreeGroup.className = "form-group";
+    const agreeLabelEl = document.createElement("label");
+    agreeLabelEl.textContent = "Do you agree with the supervisor?";
+    agreeGroup.appendChild(agreeLabelEl);
+
+    const toggle = document.createElement("div");
+    toggle.className = "agree-toggle";
+    let agreeState = true;
+
+    const agreeBtn = document.createElement("button");
+    agreeBtn.textContent = "Agree";
+    agreeBtn.className = "active-agree";
+
+    const disagreeBtn = document.createElement("button");
+    disagreeBtn.textContent = "Disagree";
+
+    agreeBtn.onclick = () => {
+      agreeState = true;
+      agreeBtn.className = "active-agree";
+      disagreeBtn.className = "";
+    };
+    disagreeBtn.onclick = () => {
+      agreeState = false;
+      disagreeBtn.className = "active-disagree";
+      agreeBtn.className = "";
+    };
+
+    toggle.appendChild(agreeBtn);
+    toggle.appendChild(disagreeBtn);
+    agreeGroup.appendChild(toggle);
+    form.appendChild(agreeGroup);
+
+    // Feedback textarea
+    const fbGroup = document.createElement("div");
+    fbGroup.className = "form-group";
+    const fbLabel = document.createElement("label");
+    fbLabel.textContent = "Feedback (optional)";
+    fbGroup.appendChild(fbLabel);
+
+    const fbTextarea = document.createElement("textarea");
+    fbTextarea.className = "answer-textarea";
+    fbTextarea.placeholder = "Explain your verification decision...";
+    fbTextarea.style.minHeight = "80px";
+    fbGroup.appendChild(fbTextarea);
+    form.appendChild(fbGroup);
+
+    // Submit button
+    const actions = document.createElement("div");
+    actions.className = "answer-actions";
+    const submitBtn = document.createElement("button");
+    submitBtn.className = "btn-submit";
+    submitBtn.textContent = "Submit Verification";
+
+    submitBtn.onclick = async () => {
+      const settings = getSettings();
+      if (!settings.resolverPubkey) return toast("Missing resolver pubkey", "Open Settings and set a pubkey.");
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Submitting...";
+      try {
+        const body = {
+          verifierPubkey: settings.resolverPubkey,
+          groundTruthScore: parseInt(slider.value),
+          agreesWithSupervisor: agreeState,
+          feedback: fbTextarea.value.trim(),
+        };
+        const resp = await API.submitVerification(task.id, body);
+        if (resp.error) {
+          toast("Verification failed", String(resp.error));
+          pushActivity("error", "Verification failed", String(resp.error));
+        } else {
+          toast("Verification submitted", `Task ${short(task.id, 5)} verified`);
+          pushActivity("verify", "Verification submitted", `task=${short(task.id, 5)}`);
+        }
+        await refresh();
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Submit Verification";
+      }
+    };
+
+    actions.appendChild(submitBtn);
+    form.appendChild(actions);
+    root.appendChild(form);
+  }
+
   // Metadata
   const metaSection = document.createElement("div");
   metaSection.className = "detail-meta";
@@ -516,6 +818,103 @@ function renderDetail() {
 
   metaSection.appendChild(grid);
   root.appendChild(metaSection);
+}
+
+// ── Render: Agent Pool ──────────────────────────────
+
+function renderAgentPool() {
+  const root = $("agentPool");
+  root.innerHTML = "";
+
+  const heading = document.createElement("h2");
+  heading.textContent = "Agent Pool";
+  root.appendChild(heading);
+
+  if (!State.agents.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.style.height = "200px";
+    empty.innerHTML = '<div class="empty-state-icon">&#9881;</div>';
+    const msg = document.createElement("div");
+    msg.textContent = "No agents registered yet.";
+    empty.appendChild(msg);
+    root.appendChild(empty);
+    return;
+  }
+
+  const table = document.createElement("table");
+  table.className = "agent-table";
+
+  const thead = document.createElement("thead");
+  thead.innerHTML = "<tr><th>Name</th><th>Role</th><th>Tier</th><th>Trust</th><th>Confusion</th><th>Tasks</th></tr>";
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+
+  const tierLabels = { 1: "Autonomous", 2: "Standard", 3: "Probation", 4: "Suspended" };
+  const tierColors = { 1: "var(--status-paid)", 2: "var(--accent)", 3: "var(--status-answered)", 4: "var(--status-refunded)" };
+
+  for (const agent of State.agents) {
+    const trust = State.trustScores.find((t) => t.agentId === agent.agentId || t.pubkey === agent.pubkey);
+    const score = trust ? Number(trust.score) : 50;
+    const tier = trust && trust.tier ? trust.tier : (score >= 80 ? 1 : score >= 40 ? 2 : score >= 15 ? 3 : 4);
+    const cm = trust && trust.confusionMatrix ? trust.confusionMatrix : { tp: 0, tn: 0, fp: 0, fn: 0 };
+
+    const tr = document.createElement("tr");
+
+    const tdName = document.createElement("td");
+    tdName.style.fontWeight = "600";
+    tdName.textContent = agent.name || short(agent.pubkey, 8);
+    tr.appendChild(tdName);
+
+    const tdRole = document.createElement("td");
+    tdRole.textContent = agent.role || "subscriber";
+    tr.appendChild(tdRole);
+
+    // Tier badge
+    const tdTier = document.createElement("td");
+    const tierBadge = document.createElement("span");
+    tierBadge.className = "tier-badge tier-" + tier;
+    tierBadge.textContent = "T" + tier + " " + (tierLabels[tier] || "");
+    tierBadge.style.cssText = `display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;color:#fff;background:${tierColors[tier] || "#888"}`;
+    tdTier.appendChild(tierBadge);
+    tr.appendChild(tdTier);
+
+    // Trust score + bar
+    const tdTrust = document.createElement("td");
+    const badge = document.createElement("span");
+    badge.className = "trust-badge " + (score >= 80 ? "high" : score >= 40 ? "medium" : "low");
+    badge.textContent = score;
+    tdTrust.appendChild(badge);
+    const trustBar = document.createElement("div");
+    trustBar.className = "trust-bar";
+    const trustFill = document.createElement("div");
+    trustFill.className = "trust-bar-fill";
+    trustFill.style.width = score + "%";
+    trustFill.style.background = tierColors[tier] || "#888";
+    trustBar.appendChild(trustFill);
+    tdTrust.appendChild(trustBar);
+    tr.appendChild(tdTrust);
+
+    // Confusion matrix (compact)
+    const tdCM = document.createElement("td");
+    tdCM.style.fontFamily = "var(--font-mono)";
+    tdCM.style.fontSize = "11px";
+    tdCM.innerHTML = `<span style="color:var(--status-paid)" title="True Positive">TP:${cm.tp}</span> <span style="color:var(--status-paid)" title="True Negative">TN:${cm.tn}</span><br><span style="color:var(--status-refunded)" title="False Positive">FP:${cm.fp}</span> <span style="color:var(--status-answered)" title="False Negative">FN:${cm.fn}</span>`;
+    tr.appendChild(tdCM);
+
+    // Tasks count
+    const tdTasks = document.createElement("td");
+    tdTasks.style.fontFamily = "var(--font-mono)";
+    const totalTasks = trust ? (trust.totalTasks || 0) : 0;
+    tdTasks.textContent = totalTasks;
+    tr.appendChild(tdTasks);
+
+    tbody.appendChild(tr);
+  }
+
+  table.appendChild(tbody);
+  root.appendChild(table);
 }
 
 // ── Render: Activity ────────────────────────────────
@@ -577,12 +976,39 @@ function setConn(ok, text) {
 }
 
 function setActiveTab(filter) {
+  // If switching to agents view, toggle it from the header button
+  if (filter === "agents") {
+    if (State.view === "agents") {
+      // Toggle back to tasks
+      showTasksView();
+      return;
+    }
+    State.view = "agents";
+    $("agentsBtn").classList.add("active");
+    $("taskRail").style.display = "none";
+    $("detail").style.display = "none";
+    $("agentPool").style.display = "block";
+    renderAgentPool();
+    return;
+  }
+
+  // Task filter tabs
   State.filter = filter;
-  for (const id of ["tabOpen", "tabAnswered", "tabPaid", "tabAll"]) {
+  const allTabs = ["tabOpen", "tabAnswered", "tabPaid", "tabAll", "tabReview"];
+  for (const id of allTabs) {
     $(id).classList.remove("active");
   }
-  const map = { open: "tabOpen", answered: "tabAnswered", paid: "tabPaid", all: "tabAll" };
+  const map = { open: "tabOpen", answered: "tabAnswered", paid: "tabPaid", all: "tabAll", review: "tabReview" };
   $(map[filter]).classList.add("active");
+  showTasksView();
+}
+
+function showTasksView() {
+  State.view = "tasks";
+  $("agentsBtn").classList.remove("active");
+  $("taskRail").style.display = "";
+  $("detail").style.display = "";
+  $("agentPool").style.display = "none";
   renderTaskList();
   renderDetail();
 }
@@ -615,9 +1041,23 @@ async function refresh() {
     const prevIds = new Set(State.tasks.map((t) => t.id));
     State.tasks = (data && data.tasks) || [];
 
+    // Fetch agents and trust in parallel (non-blocking)
+    Promise.all([
+      API.listAgents().catch(() => null),
+      API.getTrust().catch(() => null),
+    ]).then(([agentsData, trustData]) => {
+      if (agentsData && Array.isArray(agentsData.agents)) State.agents = agentsData.agents;
+      else if (agentsData && Array.isArray(agentsData)) State.agents = agentsData;
+      if (trustData && Array.isArray(trustData.scores)) State.trustScores = trustData.scores;
+      else if (trustData && Array.isArray(trustData)) State.trustScores = trustData;
+      if (State.view === "agents") renderAgentPool();
+    });
+
     renderStats();
-    renderTaskList();
-    if (!isTypingAnswer()) renderDetail();
+    if (State.view === "tasks") {
+      renderTaskList();
+      if (!isTypingAnswer()) renderDetail();
+    }
 
     const newOnes = State.tasks.filter((t) => !prevIds.has(t.id));
     if (newOnes.length) {
@@ -644,7 +1084,22 @@ function connectWs() {
   ws.onmessage = (evt) => {
     try {
       const msg = JSON.parse(evt.data || "{}");
-      if (msg && msg.type) pushActivity("ws", msg.type, msg.taskId ? `task=${short(msg.taskId, 5)}` : "");
+      if (msg && msg.type) {
+        pushActivity("ws", msg.type, msg.taskId ? `task=${short(msg.taskId, 5)}` : "");
+        if (msg.type === "agent.registered" || msg.type === "trust.updated") {
+          // Refresh agents immediately
+          API.listAgents().catch(() => null).then((d) => {
+            if (d && Array.isArray(d.agents)) State.agents = d.agents;
+            else if (d && Array.isArray(d)) State.agents = d;
+            if (State.view === "agents") renderAgentPool();
+          });
+          API.getTrust().catch(() => null).then((d) => {
+            if (d && Array.isArray(d.scores)) State.trustScores = d.scores;
+            else if (d && Array.isArray(d)) State.trustScores = d;
+            if (State.view === "agents") renderAgentPool();
+          });
+        }
+      }
     } catch {
       // ignore
     }
@@ -662,7 +1117,7 @@ function connectWs() {
 
 function boot() {
   // Tabs
-  for (const id of ["tabOpen", "tabAnswered", "tabPaid", "tabAll"]) {
+  for (const id of ["tabOpen", "tabAnswered", "tabPaid", "tabAll", "tabReview"]) {
     $(id).onclick = () => setActiveTab($(id).dataset.filter);
   }
 
@@ -672,6 +1127,8 @@ function boot() {
     renderDetail();
   });
 
+  // Header buttons
+  $("agentsBtn").onclick = () => setActiveTab("agents");
   $("refreshBtn").onclick = refresh;
   $("settingsBtn").onclick = openSettings;
 

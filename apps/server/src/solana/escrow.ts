@@ -104,6 +104,45 @@ export class EscrowService {
     return sig;
   }
 
+  /** Release bounty split between subscriber and verifier. */
+  async releaseSplit(
+    task: Task,
+    subscriberPubkey: string,
+    verifierPubkey: string,
+    subscriberShare = 0.7
+  ): Promise<{ subscriberTxSig: string; verifierTxSig: string }> {
+    if (this.mock) {
+      const subscriberTxSig = `MOCK_RELEASE_SUB_${task.id}`;
+      const verifierTxSig = `MOCK_RELEASE_VER_${task.id}`;
+      console.log(`[escrow] MOCK releaseSplit: sub=${subscriberTxSig} ver=${verifierTxSig}`);
+      return { subscriberTxSig, verifierTxSig };
+    }
+
+    const subscriberAmount = Math.floor(task.bountyLamports * subscriberShare);
+    const verifierAmount = task.bountyLamports - subscriberAmount;
+
+    const subscriberTxSig = await this.transfer(new PublicKey(subscriberPubkey), subscriberAmount);
+    const verifierTxSig = await this.transfer(new PublicKey(verifierPubkey), verifierAmount);
+
+    console.log(
+      `[escrow] releaseSplit: ${subscriberAmount} -> ${subscriberPubkey}, ${verifierAmount} -> ${verifierPubkey}`
+    );
+    return { subscriberTxSig, verifierTxSig };
+  }
+
+  /** Release full bounty to subscriber (auto-approved, no verifier). */
+  async releaseToSubscriber(task: Task, subscriberPubkey: string): Promise<string> {
+    if (this.mock) {
+      const sig = `MOCK_AUTO_RELEASE_${task.id}`;
+      console.log(`[escrow] MOCK auto-release: ${sig}`);
+      return sig;
+    }
+
+    const sig = await this.transfer(new PublicKey(subscriberPubkey), task.bountyLamports);
+    console.log(`[escrow] auto-released ${task.bountyLamports} lamports -> ${subscriberPubkey}`);
+    return sig;
+  }
+
   /** Refund bounty from escrow back to the agent. */
   async refund(task: Task): Promise<string> {
     if (this.mock) {

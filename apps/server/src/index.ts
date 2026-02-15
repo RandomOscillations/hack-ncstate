@@ -6,9 +6,13 @@ import { loadDotEnvFromCwd } from "./dotenv";
 import { loadEnv } from "./env";
 import { TaskStore } from "./tasks/store";
 import { TaskService } from "./tasks/service";
+import { FulfillmentStore } from "./tasks/fulfillment-store";
+import { CalibrationStore } from "./tasks/calibration-store";
 import { WsHub } from "./ws/hub";
-import { EscrowService } from "./solana";
+import { EscrowService, ChainLogger } from "./solana";
 import { makeRoutes } from "./http/routes";
+import { PubSubBroker } from "./pubsub";
+import { AgentRegistry, TrustStore } from "./agents";
 
 // Load apps/server/.env automatically when running via npm workspaces.
 loadDotEnvFromCwd(".env");
@@ -31,8 +35,26 @@ const escrow = new EscrowService({
   escrowKeypairPath: env.escrowKeypairPath,
 });
 
+const broker = new PubSubBroker();
+const agentRegistry = new AgentRegistry();
+const trustStore = new TrustStore();
+const fulfillmentStore = new FulfillmentStore();
+const calibrationStore = new CalibrationStore();
+const chainLogger = new ChainLogger({
+  mockSolana: env.mockSolana,
+  conn: null,
+  keypair: null,
+});
+
+// Bridge pub-sub to WebSocket
+broker.subscribe({
+  id: "ws-bridge",
+  topicPattern: "*",
+  callback: (msg) => ws.broadcast({ type: "pubsub", topic: msg.topic, payload: msg.payload }),
+});
+
 // API routes
-app.use("/api", makeRoutes(env, tasks, ws, escrow));
+app.use("/api", makeRoutes(env, tasks, ws, escrow, broker, agentRegistry, trustStore, chainLogger, fulfillmentStore, calibrationStore));
 
 // Static UI + assets
 app.use(express.static(env.webPublicDir));

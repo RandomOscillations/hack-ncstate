@@ -113,7 +113,7 @@ async function callLlm(env: AgentEnv, prompt: string): Promise<string> {
 // Public step functions (cache-aware)
 // ---------------------------------------------------------------------------
 
-async function cachedCallLlm(env: AgentEnv, key: string, prompt: string): Promise<string> {
+export async function cachedCallLlm(env: AgentEnv, key: string, prompt: string): Promise<string> {
   if (!env.invokeLlm) {
     const hit = getCached(key);
     if (hit) {

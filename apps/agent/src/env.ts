@@ -25,6 +25,8 @@ export type AgentEnv = {
   invokeLlm: boolean;
   pollIntervalMs: number;
   pollTimeoutMs: number;
+  agentMode: "publisher" | "subscriber" | "supervisor";
+  agentName: string;
 };
 
 export function loadEnv(): AgentEnv {
@@ -51,5 +53,7 @@ export function loadEnv(): AgentEnv {
     solanaRpcUrl: process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com",
     pollIntervalMs: Number(process.env.POLL_INTERVAL_MS || "2000"),
     pollTimeoutMs: Number(process.env.POLL_TIMEOUT_MS || "300000"),
+    agentMode: (process.env.AGENT_MODE || "publisher") as "publisher" | "subscriber" | "supervisor",
+    agentName: process.env.AGENT_NAME || "agent-1",
   };
 }
