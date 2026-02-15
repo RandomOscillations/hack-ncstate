@@ -7,41 +7,105 @@
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <header class="top">
+    <header class="topbar">
       <div class="brand">
         <div class="logo">UA</div>
-        <div>
+        <div class="brandText">
           <div class="title">Unblock.Agent</div>
-          <div class="subtitle">Resolver Console (Hackathon Demo)</div>
+          <div class="subtitle">Resolver Console (Devnet Demo)</div>
         </div>
       </div>
-      <div class="settings">
-        <label>
-          Resolver Pubkey
-          <input id="resolverPubkey" placeholder="Enter devnet pubkey" />
-        </label>
-        <label>
-          Demo Token
-          <input id="demoToken" placeholder="x-demo-token" />
-        </label>
-        <button id="saveSettings">Save</button>
+
+      <div class="topbarRight">
+        <div class="conn">
+          <span class="dot" id="connDot"></span>
+          <span id="statusText">Starting...</span>
+        </div>
+        <button class="btn ghost" id="refreshBtn">Refresh</button>
+        <button class="btn" id="settingsBtn">Settings</button>
       </div>
     </header>
 
-    <main class="main">
-      <section class="panel">
-        <div class="panelHeader">
-          <h2>Open Tasks</h2>
-          <div class="meta">
-            <span id="statusText">Connecting...</span>
-            <button id="refreshBtn">Refresh</button>
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="sidebarTop">
+          <div class="tabs" role="tablist" aria-label="Task filters">
+            <button class="tab active" id="tabOpen" data-filter="open">Open</button>
+            <button class="tab" id="tabAnswered" data-filter="answered">Answered</button>
+            <button class="tab" id="tabPaid" data-filter="paid">Paid</button>
+            <button class="tab" id="tabAll" data-filter="all">All</button>
+          </div>
+          <div class="searchRow">
+            <input id="search" class="input" placeholder="Search question/context..." />
           </div>
         </div>
-        <div id="tasks" class="tasks"></div>
-      </section>
-    </main>
+        <div id="taskList" class="taskList" aria-label="Task list"></div>
+      </aside>
+
+      <main class="content">
+        <section class="statsCard" aria-label="Stats">
+          <div class="statsGrid" id="stats"></div>
+        </section>
+
+        <section class="detailCard" aria-label="Task detail">
+          <div id="detail" class="detail"></div>
+        </section>
+      </main>
+
+      <aside class="rightbar">
+        <section class="activityCard" aria-label="Activity">
+          <div class="cardHeader">
+            <div class="cardTitle">Activity</div>
+            <div class="cardHint">WS + polling</div>
+          </div>
+          <div id="activity" class="activity"></div>
+        </section>
+      </aside>
+    </div>
+
+    <div id="toasts" class="toasts" aria-live="polite" aria-relevant="additions"></div>
+
+    <div id="modal" class="modal" aria-hidden="true">
+      <div class="modalBackdrop" id="modalBackdrop"></div>
+      <div class="modalBody" role="dialog" aria-modal="true" aria-label="Image preview">
+        <div class="modalTop">
+          <div class="modalTitle" id="modalTitle">Preview</div>
+          <button class="btn ghost" id="modalClose">Close</button>
+        </div>
+        <img id="modalImg" alt="preview" />
+      </div>
+    </div>
+
+    <div id="settingsModal" class="modal" aria-hidden="true">
+      <div class="modalBackdrop" id="settingsBackdrop"></div>
+      <div class="modalBody" role="dialog" aria-modal="true" aria-label="Settings">
+        <div class="modalTop">
+          <div class="modalTitle">Settings</div>
+          <button class="btn ghost" id="settingsClose">Close</button>
+        </div>
+        <div class="form">
+          <label class="field">
+            <div class="fieldLabel">Resolver Pubkey</div>
+            <input id="resolverPubkey" class="input mono" placeholder="Enter devnet pubkey" />
+            <div class="fieldHint">This is where payouts go when the agent confirms.</div>
+          </label>
+          <label class="field">
+            <div class="fieldLabel">Demo Token</div>
+            <input id="demoToken" class="input mono" placeholder="x-demo-token" />
+            <div class="fieldHint">Server may require this for answer submissions on shared WiFi.</div>
+          </label>
+          <label class="fieldRow">
+            <input id="soundEnabled" type="checkbox" />
+            <span>Play sound on new task</span>
+          </label>
+          <div class="formActions">
+            <button class="btn" id="saveSettings">Save</button>
+            <button class="btn ghost" id="clearSettings">Clear</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <script src="/app.js"></script>
   </body>
 </html>
-
