@@ -1324,10 +1324,6 @@ function renderActivity() {
 // ── Connection ──────────────────────────────────────
 
 function setConn(ok, text) {
-  $("statusText").textContent = text;
-  const dot = $("connDot");
-  dot.classList.remove("ok", "bad");
-  dot.classList.add(ok ? "ok" : "bad");
   // Connection pill
   const pill = $("connPill");
   if (pill) {
