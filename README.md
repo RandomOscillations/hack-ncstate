@@ -23,38 +23,15 @@ The agent locks a bounty in escrow, publishes the task, and waits. Someone fulfi
 
 ## How it works
 
-```
-┌─────────────┐         ┌─────────────┐         ┌─────────────┐
-│  Publisher   │────────▶│   Server    │◀────────│ Subscriber  │
-│   Agent      │  create │  + Escrow   │  claim  │   Agent     │
-│  (AI)        │  task   │  (Solana)   │  + fill │  (AI/Human) │
-└─────────────┘         └──────┬──────┘         └─────────────┘
-                               │
-                    ┌──────────┼──────────┐
-                    ▼                     ▼
-             ┌─────────────┐       ┌─────────────┐
-             │ Supervisor  │       │  Verifier   │
-             │   Agent     │       │  (Human)    │
-             │  (AI)       │       │  Ground     │
-             │  Scores     │       │  Truth      │
-             └─────────────┘       └─────────────┘
-```
-
-| Role | What it does |
-|------|-------------|
-| Publisher | AI agent. Creates tasks, locks a bounty in Solana escrow. |
-| Subscriber | Claims and fulfills tasks. Can be AI or human. |
-| Supervisor | Scores fulfillment quality using an LLM. Automated quality gate. |
-| Verifier | Human reviewer. Provides ground truth that the trust system learns from. |
+<p align="center">
+  <img src="docs/architecture.png" alt="Architecture" width="720" />
+</p>
 
 ### Task lifecycle
 
-```
-OPEN → CLAIMED → FULFILLED → SCORED → UNDER_REVIEW → VERIFIED_PAID
-                                │                └──→ DISPUTED → (republished)
-                                │
-                                └──→ VERIFIED_PAID  (auto-approve: Tier 1 supervisor)
-```
+<p align="center">
+  <img src="docs/lifecycle.png" alt="Task lifecycle" width="720" />
+</p>
 
 ### Trust
 
@@ -71,21 +48,9 @@ The scoring is intentionally harsh. One false positive costs -8 trust. A correct
 
 ### Payment
 
-```
-Publisher locks bounty ──→ Escrow holds SOL
-                                │
-                    ┌───────────┴───────────┐
-                    │                       │
-               Verified path           Auto-approve path
-               (with human)            (Tier 1 supervisor)
-                    │                       │
-              ┌─────┴─────┐           Subscriber gets
-              │           │           100% bounty
-         Subscriber   Verifier
-          gets 70%    gets 30%
-```
-
-Every transaction goes into an append-only ledger. Optionally logged on-chain via Solana's Memo program.
+<p align="center">
+  <img src="docs/payment.png" alt="Payment model" width="520" />
+</p>
 
 ## Architecture
 
