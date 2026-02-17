@@ -67,6 +67,7 @@ const _taskElements = new Map();
 let _detailFingerprint = "";
 let _ledgerFingerprint = "";
 let _initialLoad = true;
+const _walletCache = new Map(); // pubkey -> { sol, fetchedAt }
 
 // ── Simple Markdown Renderer ────────────────────────
 
@@ -1004,7 +1005,7 @@ function renderAgentPool() {
   table.className = "agent-table";
 
   const thead = document.createElement("thead");
-  thead.innerHTML = "<tr><th>Name</th><th>Role</th><th>Tier</th><th>Trust</th><th>Confusion</th><th>Tasks</th></tr>";
+  thead.innerHTML = "<tr><th>Name</th><th>Role</th><th>Tier</th><th>Trust</th><th>Wallet</th><th>Confusion</th><th>Tasks</th></tr>";
   table.appendChild(thead);
 
   const tbody = document.createElement("tbody");
@@ -1053,6 +1054,38 @@ function renderAgentPool() {
     trustBar.appendChild(trustFill);
     tdTrust.appendChild(trustBar);
     tr.appendChild(tdTrust);
+
+    // Wallet balance (cached, refreshes every 30s)
+    const tdWallet = document.createElement("td");
+    tdWallet.style.fontFamily = "var(--font-mono)";
+    tdWallet.style.fontSize = "12px";
+    tdWallet.textContent = "—";
+    tr.appendChild(tdWallet);
+    if (agent.pubkey) {
+      const cached = _walletCache.get(agent.pubkey);
+      if (cached && (Date.now() - cached.fetchedAt) < 30_000) {
+        tdWallet.textContent = cached.sol + " SOL";
+        tdWallet.style.color = "var(--status-paid)";
+        tdWallet.style.fontWeight = "600";
+      } else {
+        fetch("https://api.devnet.solana.com", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getBalance", params: [agent.pubkey] }),
+        })
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.result && data.result.value !== undefined) {
+              const sol = (data.result.value / 1e9).toFixed(3);
+              _walletCache.set(agent.pubkey, { sol, fetchedAt: Date.now() });
+              tdWallet.textContent = sol + " SOL";
+              tdWallet.style.color = "var(--status-paid)";
+              tdWallet.style.fontWeight = "600";
+            }
+          })
+          .catch(() => {});
+      }
+    }
 
     // Confusion matrix (compact)
     const tdCM = document.createElement("td");

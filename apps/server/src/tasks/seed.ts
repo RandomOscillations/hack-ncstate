@@ -1,9 +1,24 @@
 import type { Task, Fulfillment, SupervisorScore, VerifierReview, LedgerEntry, LedgerEntryType, TaskStatus } from "@unblock/common";
 import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import { TaskStore } from "./store";
 import { LedgerStore } from "./ledger-store";
 import { AgentRegistry } from "../agents/registry";
 import { TrustStore } from "../agents/trust";
+
+function loadPubkey(name: string): string | null {
+  try {
+    const filePath = path.resolve(process.cwd(), "../../.secrets", `${name}.json`);
+    const raw = fs.readFileSync(filePath, "utf8");
+    const secret = Uint8Array.from(JSON.parse(raw));
+    // Dynamically import to avoid hard dependency
+    const { Keypair } = require("@solana/web3.js");
+    return Keypair.fromSecretKey(secret).publicKey.toBase58();
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Seeds 13 demo tasks with varied statuses, fulfillments, scores, and reviews.
@@ -16,14 +31,17 @@ export function seedDemoData(
   ledgerStore: LedgerStore,
 ) {
   const now = Date.now();
-  const ESCROW_KEY = "escrow-pubkey-1234567890abcdef";
+  const realAgent = loadPubkey("agent");
+  const realEscrow = loadPubkey("escrow");
+  const realResolver = loadPubkey("resolver");
+  const ESCROW_KEY = realEscrow || "escrow-pubkey-1234567890abcdef";
   const PUB = "seed-publisher";
   const SUB = "seed-subscriber";
   const SUP = "seed-supervisor";
-  const PUB_KEY = "seed-publisher-pubkey-1234567890";
-  const SUB_KEY = "seed-subscriber-pubkey-123456789";
-  const SUP_KEY = "seed-supervisor-pubkey-123456789";
-  const VER_KEY = "verifier-pubkey-1234567890";
+  const PUB_KEY = realAgent || "seed-publisher-pubkey-1234567890";
+  const SUB_KEY = realResolver || "seed-subscriber-pubkey-123456789";
+  const SUP_KEY = realEscrow || "seed-supervisor-pubkey-123456789";
+  const VER_KEY = realResolver || "verifier-pubkey-1234567890";
 
   // Register agents
   const pubId = agentRegistry.register({ name: PUB, role: "publisher", pubkey: PUB_KEY }).agentId;

@@ -1,4 +1,5 @@
 import http from "node:http";
+import fs from "node:fs";
 import express from "express";
 import cors from "cors";
 
@@ -11,6 +12,7 @@ import { CalibrationStore } from "./tasks/calibration-store";
 import { LedgerStore } from "./tasks/ledger-store";
 import { WsHub } from "./ws/hub";
 import { EscrowService, ChainLogger } from "./solana";
+import { createConnection } from "./solana/connection";
 import { makeRoutes } from "./http/routes";
 import { PubSubBroker } from "./pubsub";
 import { AgentRegistry, TrustStore } from "./agents";
@@ -20,6 +22,16 @@ import { seedDemoData } from "./tasks/seed";
 loadDotEnvFromCwd(".env");
 
 const env = loadEnv();
+
+// Shared Solana connection + keypair for escrow & chain logger
+let sharedConn: import("@solana/web3.js").Connection | null = null;
+let sharedKeypair: import("@solana/web3.js").Keypair | null = null;
+if (!env.mockSolana) {
+  const { Keypair } = require("@solana/web3.js");
+  sharedConn = createConnection(env.solanaRpcUrl);
+  const raw = fs.readFileSync(env.escrowKeypairPath, "utf8");
+  sharedKeypair = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(raw)));
+}
 
 const app = express();
 app.use(cors());
@@ -45,8 +57,8 @@ const calibrationStore = new CalibrationStore();
 const ledgerStore = new LedgerStore();
 const chainLogger = new ChainLogger({
   mockSolana: env.mockSolana,
-  conn: null,
-  keypair: null,
+  conn: sharedConn,
+  keypair: sharedKeypair,
 });
 
 // Bridge pub-sub to WebSocket
