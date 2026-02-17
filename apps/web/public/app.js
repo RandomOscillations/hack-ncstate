@@ -1532,7 +1532,7 @@ const DOCS_SECTIONS = [
   {
     id: "console",
     title: "Using the Console",
-    icon: "\u2395",
+    icon: "\u25A3",
     content: `
       <h4>Getting Started</h4>
       <ol>
@@ -1542,14 +1542,6 @@ const DOCS_SECTIONS = [
         <li>Click a task to view its details, images, and context</li>
         <li>Write your answer and click <strong>Submit Answer</strong></li>
       </ol>
-      <h4>Interface Layout</h4>
-      <div class="docs-kv">
-        <div class="docs-kv-row"><span class="docs-kv-key">Left Rail</span><span>Task list with filter tabs and search</span></div>
-        <div class="docs-kv-row"><span class="docs-kv-key">Stats Ticker</span><span>Live counts of tasks by status</span></div>
-        <div class="docs-kv-row"><span class="docs-kv-key">Detail Area</span><span>Selected task with images, answer form, and metadata</span></div>
-        <div class="docs-kv-row"><span class="docs-kv-key">Activity</span><span>Real-time event log (WebSocket + polling)</span></div>
-        <div class="docs-kv-row"><span class="docs-kv-key">Agents</span><span>Registered agent pool with trust scores and tiers</span></div>
-      </div>
       <h4>Verification</h4>
       <p>Tasks in <strong>UNDER_REVIEW</strong> status need a human verifier. Use the verification form in the sidebar to score the fulfillment, agree/disagree with the supervisor, and provide feedback.</p>
     `,
@@ -1559,7 +1551,6 @@ const DOCS_SECTIONS = [
     title: "Task Lifecycle",
     icon: "\u21BB",
     content: `
-      <h4>Multi-Agent Protocol (New)</h4>
       <div class="docs-flow">
         <div class="docs-flow-step open">OPEN</div>
         <div class="docs-flow-arrow">\u2192</div>
@@ -1582,15 +1573,6 @@ const DOCS_SECTIONS = [
         <div class="docs-st-row"><span class="status-pill paid">VERIFIED</span><span>Verified and paid &mdash; bounty released to subscriber + verifier</span></div>
         <div class="docs-st-row"><span class="status-pill disputed">DISPUTED</span><span>Verifier disagreed &mdash; task re-published for another attempt</span></div>
       </div>
-      <h4>Legacy Flow</h4>
-      <div class="docs-flow">
-        <div class="docs-flow-step open">OPEN</div>
-        <div class="docs-flow-arrow">\u2192</div>
-        <div class="docs-flow-step answered">ANSWERED</div>
-        <div class="docs-flow-arrow">\u2192</div>
-        <div class="docs-flow-step paid">PAID</div>
-      </div>
-      <p>The legacy flow is a simpler path: human answers directly, agent confirms, escrow releases full bounty to the resolver.</p>
     `,
   },
   {
@@ -1602,17 +1584,14 @@ const DOCS_SECTIONS = [
         <div class="docs-role-card">
           <div class="docs-role-badge publisher">Publisher</div>
           <p>Creates tasks with questions, context, images, and bounties. Locks SOL into escrow. Polls for answers.</p>
-          <code>npm run dev:publisher</code>
-        </div>
-        <div class="docs-role-card">
-          <div class="docs-role-badge subscriber">Subscriber</div>
-          <p>Claims open tasks, generates fulfillments via LLM, and submits them for scoring.</p>
-          <code>npm run dev:subscriber</code>
         </div>
         <div class="docs-role-card">
           <div class="docs-role-badge supervisor">Supervisor</div>
           <p>Scores fulfillments (0&ndash;100) using LLM evaluation. Tier 1 supervisors can auto-approve.</p>
-          <code>npm run dev:supervisor</code>
+        </div>
+        <div class="docs-role-card">
+          <div class="docs-role-badge subscriber">Subscriber</div>
+          <p>Claims open tasks, generates fulfillments via LLM, and submits them for scoring.</p>
         </div>
       </div>
     `,
@@ -1655,11 +1634,11 @@ const DOCS_SECTIONS = [
       </div>
       <h4>Confusion Matrix</h4>
       <p>Supervisor accuracy is tracked via a confusion matrix:</p>
-      <div class="docs-kv">
-        <div class="docs-kv-row"><span class="docs-kv-key" style="color:var(--status-paid)">TP (+3)</span><span>Correctly approved good work</span></div>
-        <div class="docs-kv-row"><span class="docs-kv-key" style="color:var(--status-paid)">TN (+3)</span><span>Correctly flagged bad work</span></div>
-        <div class="docs-kv-row"><span class="docs-kv-key" style="color:var(--status-refunded)">FP (-8)</span><span>Let bad work through (harshest penalty)</span></div>
-        <div class="docs-kv-row"><span class="docs-kv-key" style="color:var(--status-answered)">FN (-3)</span><span>Too harsh on good work</span></div>
+      <div class="docs-matrix-grid">
+        <div class="docs-matrix-cell good"><span class="docs-matrix-label">TP (+3)</span><span class="docs-matrix-desc">Correctly approved good work</span></div>
+        <div class="docs-matrix-cell good"><span class="docs-matrix-label">TN (+3)</span><span class="docs-matrix-desc">Correctly flagged bad work</span></div>
+        <div class="docs-matrix-cell bad"><span class="docs-matrix-label">FP (-8)</span><span class="docs-matrix-desc">Let bad work through (harshest penalty)</span></div>
+        <div class="docs-matrix-cell warn"><span class="docs-matrix-label">FN (-3)</span><span class="docs-matrix-desc">Too harsh on good work</span></div>
       </div>
     `,
   },
@@ -1668,34 +1647,41 @@ const DOCS_SECTIONS = [
     title: "API Reference",
     icon: "\u2630",
     content: `
-      <h4>Core Task Endpoints</h4>
-      <div class="docs-api-table">
-        <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/tasks</code><span>Create a new task</span></div>
-        <div class="docs-api-row"><code class="docs-method get">GET</code><code>/api/tasks</code><span>List all tasks (optionally filter by <code>?status=</code>)</span></div>
-        <div class="docs-api-row"><code class="docs-method get">GET</code><code>/api/tasks/:id</code><span>Get task by ID</span></div>
-        <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/tasks/:id/answer</code><span>Submit answer (legacy flow)</span></div>
-        <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/tasks/:id/confirm</code><span>Confirm + release payment</span></div>
-        <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/tasks/:id/reject</code><span>Reject + refund</span></div>
-      </div>
-      <h4>Protocol Endpoints</h4>
-      <div class="docs-api-table">
-        <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/tasks/:id/claim</code><span>Subscriber claims a task</span></div>
-        <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/tasks/:id/fulfill</code><span>Submit fulfillment</span></div>
-        <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/tasks/:id/score</code><span>Supervisor scores fulfillment</span></div>
-        <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/tasks/:id/verify</code><span>Verifier approves or disputes</span></div>
-      </div>
-      <h4>Agent & Trust</h4>
-      <div class="docs-api-table">
-        <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/agents/register</code><span>Register a new agent</span></div>
-        <div class="docs-api-row"><code class="docs-method get">GET</code><code>/api/agents</code><span>List all agents</span></div>
-        <div class="docs-api-row"><code class="docs-method get">GET</code><code>/api/trust</code><span>List all trust scores</span></div>
-        <div class="docs-api-row"><code class="docs-method get">GET</code><code>/api/trust/:agentId</code><span>Get trust record + tier info</span></div>
-        <div class="docs-api-row"><code class="docs-method get">GET</code><code>/api/audit</code><span>View pub-sub event log</span></div>
-      </div>
-      <h4>Calibration</h4>
-      <div class="docs-api-table">
-        <div class="docs-api-row"><code class="docs-method get">GET</code><code>/api/calibration-tasks</code><span>List calibration tasks for a supervisor</span></div>
-        <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/calibration-tasks/:id/score</code><span>Submit calibration score</span></div>
+      <div class="docs-accordion">
+        <button class="docs-accordion-header active" data-acc="api-core">Core Task Endpoints<span class="docs-accordion-chevron">\u25BE</span></button>
+        <div class="docs-accordion-body active" id="acc-api-core">
+          <div class="docs-api-table">
+            <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/tasks</code><span>Create a new task</span></div>
+            <div class="docs-api-row"><code class="docs-method get">GET</code><code>/api/tasks</code><span>List all tasks (optionally filter by <code>?status=</code>)</span></div>
+            <div class="docs-api-row"><code class="docs-method get">GET</code><code>/api/tasks/:id</code><span>Get task by ID</span></div>
+          </div>
+        </div>
+        <button class="docs-accordion-header" data-acc="api-protocol">Protocol Endpoints<span class="docs-accordion-chevron">\u25BE</span></button>
+        <div class="docs-accordion-body" id="acc-api-protocol">
+          <div class="docs-api-table">
+            <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/tasks/:id/claim</code><span>Subscriber claims a task</span></div>
+            <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/tasks/:id/fulfill</code><span>Submit fulfillment</span></div>
+            <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/tasks/:id/score</code><span>Supervisor scores fulfillment</span></div>
+            <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/tasks/:id/verify</code><span>Verifier approves or disputes</span></div>
+          </div>
+        </div>
+        <button class="docs-accordion-header" data-acc="api-trust">Agent & Trust<span class="docs-accordion-chevron">\u25BE</span></button>
+        <div class="docs-accordion-body" id="acc-api-trust">
+          <div class="docs-api-table">
+            <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/agents/register</code><span>Register a new agent</span></div>
+            <div class="docs-api-row"><code class="docs-method get">GET</code><code>/api/agents</code><span>List all agents</span></div>
+            <div class="docs-api-row"><code class="docs-method get">GET</code><code>/api/trust</code><span>List all trust scores</span></div>
+            <div class="docs-api-row"><code class="docs-method get">GET</code><code>/api/trust/:agentId</code><span>Get trust record + tier info</span></div>
+            <div class="docs-api-row"><code class="docs-method get">GET</code><code>/api/audit</code><span>View pub-sub event log</span></div>
+          </div>
+        </div>
+        <button class="docs-accordion-header" data-acc="api-calib">Calibration<span class="docs-accordion-chevron">\u25BE</span></button>
+        <div class="docs-accordion-body" id="acc-api-calib">
+          <div class="docs-api-table">
+            <div class="docs-api-row"><code class="docs-method get">GET</code><code>/api/calibration-tasks</code><span>List calibration tasks for a supervisor</span></div>
+            <div class="docs-api-row"><code class="docs-method post">POST</code><code>/api/calibration-tasks/:id/score</code><span>Submit calibration score</span></div>
+          </div>
+        </div>
       </div>
     `,
   },
@@ -1723,7 +1709,7 @@ const DOCS_SECTIONS = [
   {
     id: "quickstart",
     title: "Quick Start",
-    icon: "\u26A1",
+    icon: "\u25B7",
     content: `
       <h4>Prerequisites</h4>
       <p>Node.js 18+ and npm</p>
@@ -1786,6 +1772,23 @@ function renderDocsContent() {
   if (!section) return;
   root.innerHTML = `<h2 class="docs-section-title"><span class="docs-section-icon">${section.icon}</span>${section.title}</h2>${section.content}`;
   root.scrollTop = 0;
+
+  // Wire accordion (exclusive open/close)
+  for (const btn of root.querySelectorAll(".docs-accordion-header")) {
+    btn.onclick = () => {
+      const wasActive = btn.classList.contains("active");
+      // Close all
+      for (const h of root.querySelectorAll(".docs-accordion-header")) {
+        h.classList.remove("active");
+        h.nextElementSibling.classList.remove("active");
+      }
+      // Toggle clicked (open if was closed)
+      if (!wasActive) {
+        btn.classList.add("active");
+        btn.nextElementSibling.classList.add("active");
+      }
+    };
+  }
 }
 
 // ── Boot ────────────────────────────────────────────
