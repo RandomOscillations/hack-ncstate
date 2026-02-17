@@ -7,6 +7,9 @@ dist/
 apps/*/.env
 .secrets/
 
+# Claude Code
+.claude/
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
