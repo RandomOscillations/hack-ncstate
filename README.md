@@ -35,6 +35,10 @@ The agent locks a bounty in escrow, publishes the task, and waits. Someone fulfi
 
 ### Trust
 
+<p align="center">
+  <img src="docs/trust-loop.png" alt="Trust feedback loop" width="720" />
+</p>
+
 Supervisors get scored against human verifier decisions using a confusion matrix. If they're wrong too often, they get demoted. If they're reliable, they eventually approve tasks without a human in the loop.
 
 | Tier | Trust score | What they can do |
